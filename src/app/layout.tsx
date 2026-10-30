@@ -1,16 +1,23 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { getWhiteLabelConfig } from "@/lib/white-label";
+import { BrandingProvider } from "@/components/common/BrandingProvider";
 
-export const metadata: Metadata = {
-  title: "المراعي | نظام إدارة وتوزيع السلع سريعة التلف - إدارة محمد عبدالله",
-  description: "نظام المراعي لإدارة المخزون والمبيعات الميدانية للسلع سريعة التلف (ألبان وعصائر) بنظام FIFO والتسوية اليومية - تحت إدارة محمد عبدالله",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = getWhiteLabelConfig();
+  return {
+    title: `${branding.companyName} | ${branding.tagline}`,
+    description: `${branding.appName} - نظام إدارة المخزون والمبيعات الميدانية B2B المتكامل`,
+  };
+}
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const branding = getWhiteLabelConfig();
+
   return (
     <html lang="ar" dir="rtl" className="h-full">
       <head>
@@ -22,7 +29,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 antialiased font-sans selection:bg-emerald-500 selection:text-white">
-        {children}
+        <BrandingProvider initialBranding={branding}>
+          {children}
+        </BrandingProvider>
       </body>
     </html>
   );

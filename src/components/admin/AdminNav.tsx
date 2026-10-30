@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { logoutAction, updateAdminPasswordAction } from '@/lib/actions';
 import RealtimeSync from '@/components/common/RealtimeSync';
+import { useBranding } from '@/components/common/BrandingProvider';
 import {
   LayoutDashboard,
   Boxes,
@@ -37,6 +38,7 @@ interface AdminNavProps {
 export default function AdminNav({ userName }: AdminNavProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { branding } = useBranding();
   const navContainerRef = useRef<HTMLDivElement>(null);
 
   // Password Modal State
@@ -126,8 +128,8 @@ export default function AdminNav({ userName }: AdminNavProps) {
               <Truck className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0">
-              <div className="font-black text-sm sm:text-lg text-slate-800 leading-tight truncate">المراعي للتوزيع</div>
-              <div className="text-[10px] sm:text-[11px] text-emerald-600 font-semibold truncate hidden sm:block">تحت إدارة: أ/ محمد عبدالله</div>
+              <div className="font-black text-sm sm:text-lg text-slate-800 leading-tight truncate">{branding.appName}</div>
+              <div className="text-[10px] sm:text-[11px] text-emerald-600 font-semibold truncate hidden sm:block">{branding.managerName}</div>
             </div>
           </div>
 
@@ -251,7 +253,7 @@ export default function AdminNav({ userName }: AdminNavProps) {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm">تغيير كلمة مرور المدير العام</h3>
-                  <div className="text-[11px] text-slate-500">حساب أ/ محمد عبدالله</div>
+                  <div className="text-[11px] text-slate-500">حساب {userName}</div>
                 </div>
               </div>
               <button

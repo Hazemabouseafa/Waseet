@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 8889",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 8889",
     "lint": "eslint",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
@@ -24,6 +24,9 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/cli": "^7.6.10",
+    "@capacitor/core": "^8.6.0",
     "@tailwindcss/turbopack": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",

@@ -80,7 +80,7 @@ function getInitialData(): DatabaseSchema {
   const users: User[] = [
     {
       id: 'usr_admin',
-      name: 'محمد عبدالله (المدير العام)',
+      name: 'المدير العام (مسؤول النظام)',
       username: 'admin',
       password: '123',
       role: 'admin',
@@ -255,8 +255,8 @@ class DatabaseStore {
             raw.users = getInitialData().users;
           }
           const adminUser = raw.users.find((u: any) => u.username === 'admin');
-          if (adminUser) {
-            adminUser.name = 'محمد عبدالله (المدير العام)';
+          if (adminUser && !adminUser.name) {
+            adminUser.name = 'المدير العام (مسؤول النظام)';
           }
           if (!raw.categories || !Array.isArray(raw.categories)) raw.categories = [];
           if (!raw.products || !Array.isArray(raw.products)) raw.products = [];
@@ -352,8 +352,8 @@ class DatabaseStore {
         this.isLoaded = true;
 
         const adminUser = this.data.users?.find((u) => u.username === 'admin');
-        if (adminUser && adminUser.name !== 'محمد عبدالله (المدير العام)') {
-          adminUser.name = 'محمد عبدالله (المدير العام)';
+        if (adminUser && !adminUser.name) {
+          adminUser.name = 'المدير العام (مسؤول النظام)';
           this.persistToDisk();
         }
 

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { wipeDatabaseAction } from '@/lib/actions';
+import { useBranding } from '@/components/common/BrandingProvider';
 import {
   Settings,
   Database,
@@ -22,6 +23,10 @@ import {
   RefreshCw,
   X,
   FileCode,
+  Palette,
+  Building,
+  Receipt,
+  Globe,
 } from 'lucide-react';
 
 interface DatabaseStats {
@@ -51,6 +56,69 @@ interface Props {
 
 export default function AdminSettingsClientView({ initialStats, adminName }: Props) {
   const router = useRouter();
+  const { branding, updateBranding, resetBranding } = useBranding();
+
+  // White-Label Branding Form State
+  const [brandForm, setBrandForm] = useState({
+    companyName: branding.companyName,
+    appName: branding.appName,
+    managerName: branding.managerName,
+    tagline: branding.tagline,
+    currency: branding.currency,
+    phone: branding.phone,
+    address: branding.address,
+    taxNumber: branding.taxNumber,
+    commercialRegister: branding.commercialRegister,
+    receiptFooter: branding.receiptFooter,
+  });
+
+  const [isSavingBrand, setIsSavingBrand] = useState(false);
+  const [brandSavedMsg, setBrandSavedMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setBrandForm({
+      companyName: branding.companyName,
+      appName: branding.appName,
+      managerName: branding.managerName,
+      tagline: branding.tagline,
+      currency: branding.currency,
+      phone: branding.phone,
+      address: branding.address,
+      taxNumber: branding.taxNumber,
+      commercialRegister: branding.commercialRegister,
+      receiptFooter: branding.receiptFooter,
+    });
+  }, [branding]);
+
+  const handleSaveBranding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingBrand(true);
+    setBrandSavedMsg(null);
+
+    const ok = await updateBranding(brandForm);
+    setIsSavingBrand(false);
+
+    if (ok) {
+      setBrandSavedMsg('تم حفظ وتطبيق هوية النظام بنجاح! تم تحديث كافة الشاشات والفواتير فورياً.');
+      setTimeout(() => setBrandSavedMsg(null), 5000);
+      router.refresh();
+    } else {
+      alert('فشل حفظ الهوية التجارية. تأكد من اتصال السيرفر.');
+    }
+  };
+
+  const handleResetBranding = async () => {
+    if (!confirm('هل أنت متأكد من استعادة هوية "الوسيط" الافتراضية؟')) return;
+    setIsSavingBrand(true);
+    const ok = await resetBranding();
+    setIsSavingBrand(false);
+    if (ok) {
+      setBrandSavedMsg('تمت استعادة هوية الوسيط الافتراضية بنجاح.');
+      setTimeout(() => setBrandSavedMsg(null), 5000);
+      router.refresh();
+    }
+  };
+
   const [stats, setStats] = useState<DatabaseStats>(initialStats);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
@@ -156,6 +224,219 @@ export default function AdminSettingsClientView({ initialStats, adminName }: Pro
             <span>المدير: {adminName}</span>
           </div>
         </div>
+      </div>
+
+      {/* ------------------------------------------------------------- */}
+      {/* SECTION 0: WHITE-LABEL BRANDING & MULTI-CLIENT REBRANDING   */}
+      {/* ------------------------------------------------------------- */}
+      <div className="bg-white rounded-3xl border border-emerald-200/80 shadow-md shadow-emerald-600/5 overflow-hidden">
+        <div className="p-6 border-b border-emerald-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-white">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-600/20">
+              <Palette className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-black text-slate-900 break-words">
+                  تخصيص الهوية التجارية والـ White-Label
+                </h2>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 shrink-0">
+                  White-Label B2B Ready
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                أعد تخصيص اسم الشركة، الشعار، العملة، التذييل وبيانات الفواتير الميدانية لبيع النظام وتخصيصه لأي عميل فورياً دون تعديل في الكود
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleResetBranding}
+              disabled={isSavingBrand}
+              className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition"
+            >
+              استعادة الافتراضي
+            </button>
+          </div>
+        </div>
+
+        {brandSavedMsg && (
+          <div className="m-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-xs font-bold text-emerald-800 animate-fadeIn">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>{brandSavedMsg}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSaveBranding} className="p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+            {/* Company Name */}
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">اسم الشركة / المنشأة *</label>
+              <input
+                type="text"
+                required
+                value={brandForm.companyName}
+                onChange={(e) => setBrandForm({ ...brandForm, companyName: e.target.value })}
+                placeholder="مثال: شركة النور للمواد الغذائية"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-semibold focus:border-emerald-600 focus:outline-none"
+              />
+            </div>
+
+            {/* App Commercial Name */}
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">اسم التطبيق التجاري *</label>
+              <input
+                type="text"
+                required
+                value={brandForm.appName}
+                onChange={(e) => setBrandForm({ ...brandForm, appName: e.target.value })}
+                placeholder="الوسيط"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-semibold focus:border-emerald-600 focus:outline-none"
+              />
+            </div>
+
+            {/* Manager / Organization Name */}
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">المدير العام / الجهة المسؤولة</label>
+              <input
+                type="text"
+                value={brandForm.managerName}
+                onChange={(e) => setBrandForm({ ...brandForm, managerName: e.target.value })}
+                placeholder="مثال: تحت إدارة: أ/ أحمد محمد"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-semibold focus:border-emerald-600 focus:outline-none"
+              />
+            </div>
+
+            {/* Tagline */}
+            <div className="lg:col-span-2">
+              <label className="block font-bold text-slate-700 mb-1">شعار الشركة / الوصف التسويقي</label>
+              <input
+                type="text"
+                value={brandForm.tagline}
+                onChange={(e) => setBrandForm({ ...brandForm, tagline: e.target.value })}
+                placeholder="نظام إدارة المبيعات الميدانية والتوزيع B2B"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-semibold focus:border-emerald-600 focus:outline-none"
+              />
+            </div>
+
+            {/* Currency Symbol */}
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">رمز العملة النقدية *</label>
+              <input
+                type="text"
+                required
+                value={brandForm.currency}
+                onChange={(e) => setBrandForm({ ...brandForm, currency: e.target.value })}
+                placeholder="مثال: ج.م أو ر.س أو د.إ أو $"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-bold focus:border-emerald-600 focus:outline-none"
+              />
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">رقم هاتف المنشأة / خدمة العملاء</label>
+              <input
+                type="text"
+                value={brandForm.phone}
+                onChange={(e) => setBrandForm({ ...brandForm, phone: e.target.value })}
+                placeholder="010XXXXXXXX"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-mono focus:border-emerald-600 focus:outline-none"
+              />
+            </div>
+
+            {/* Commercial Register */}
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">رقم السجل التجاري (C.R)</label>
+              <input
+                type="text"
+                value={brandForm.commercialRegister}
+                onChange={(e) => setBrandForm({ ...brandForm, commercialRegister: e.target.value })}
+                placeholder="1234567"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-mono focus:border-emerald-600 focus:outline-none"
+              />
+            </div>
+
+            {/* Tax Number */}
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">رقم البطاقة الضريبية (Tax ID)</label>
+              <input
+                type="text"
+                value={brandForm.taxNumber}
+                onChange={(e) => setBrandForm({ ...brandForm, taxNumber: e.target.value })}
+                placeholder="987-654-321"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-mono focus:border-emerald-600 focus:outline-none"
+              />
+            </div>
+
+            {/* Address */}
+            <div className="lg:col-span-3">
+              <label className="block font-bold text-slate-700 mb-1">العنوان الجغرافي للمقر الرئيسي</label>
+              <input
+                type="text"
+                value={brandForm.address}
+                onChange={(e) => setBrandForm({ ...brandForm, address: e.target.value })}
+                placeholder="مثال: المنطقة الصناعية - التجمع الخامس - القاهرة"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-semibold focus:border-emerald-600 focus:outline-none"
+              />
+            </div>
+
+            {/* Receipt Footer */}
+            <div className="lg:col-span-3">
+              <label className="block font-bold text-slate-700 mb-1">نص تذييل الفاتورة الحرارية ورسائل الواتساب</label>
+              <input
+                type="text"
+                value={brandForm.receiptFooter}
+                onChange={(e) => setBrandForm({ ...brandForm, receiptFooter: e.target.value })}
+                placeholder="شكراً لتعاملكم معنا - نسعد بخدمتكم دائماً"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-semibold focus:border-emerald-600 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Live Preview Card */}
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+            <div className="text-[11px] font-black text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              <span>معاينة حية لشكل الفاتورة وترويسة النظام لعميلك الجديد (Live White-Label Preview):</span>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 max-w-md mx-auto shadow-xs text-center font-mono text-xs">
+              <div className="font-black text-slate-900 text-sm">{brandForm.companyName || 'اسم الشركة'}</div>
+              <div className="text-[11px] text-emerald-700 font-bold">{brandForm.managerName || 'الإدارة العامة'}</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">{brandForm.tagline}</div>
+              <div className="my-2 border-b border-dashed border-slate-300" />
+              <div className="text-right text-[11px] text-slate-600 space-y-0.5">
+                <div>العملة المعتمدة: <strong className="text-emerald-700 font-sans">{brandForm.currency}</strong></div>
+                <div>خدمة العملاء: {brandForm.phone || '010XXXXXXXX'}</div>
+                {brandForm.taxNumber && <div>رقم ضريبي: {brandForm.taxNumber}</div>}
+              </div>
+              <div className="my-2 border-b border-dashed border-slate-300" />
+              <div className="text-[10px] text-slate-500 font-sans">{brandForm.receiptFooter}</div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+            <button
+              type="submit"
+              disabled={isSavingBrand}
+              className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black rounded-xl text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2"
+            >
+              {isSavingBrand ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>جاري حفظ الهوية الجديدة...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>حفظ وتطبيق الهوية فوراً (Apply White-Label)</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* ------------------------------------------------------------- */}

@@ -41,6 +41,11 @@ data/
 # vercel
 .vercel
 
+# android
+android/.gradle
+android/build
+android/app/build
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

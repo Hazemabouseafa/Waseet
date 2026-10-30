@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Client, Invoice, Product } from '@/types';
 import { createInvoiceAction, createClientAction } from '@/lib/actions';
+import { useBranding } from '@/components/common/BrandingProvider';
 import {
   UserCheck,
   Plus,
@@ -59,6 +60,7 @@ export default function NewInvoiceClientView({
   repName,
 }: Props) {
   const router = useRouter();
+  const { branding } = useBranding();
   const [clients, setClients] = useState<Client[]>(initialClients);
   const [selectedClientId, setSelectedClientId] = useState<string>(initialClients[0]?.id || '');
   const [clientSearch, setClientSearch] = useState('');
@@ -274,9 +276,9 @@ export default function NewInvoiceClientView({
       day: 'numeric',
     });
 
-    const message = `🧾 *فاتورة مبيعات - المراعي للتوزيع*
+    const message = `🧾 *فاتورة مبيعات - ${branding.companyName}*
 ━━━━━━━━━━━━━━━━━━
-🏢 *تحت إدارة*: أ/ محمد عبدالله
+🏢 *إدارة*: ${branding.managerName}
 🔢 رقم الفاتورة: ${inv.invoiceNumber}
 👤 العميل: ${selectedClient?.name || 'عميل'}
 🚚 المندوب: ${repName}
@@ -774,9 +776,9 @@ ${inv.totalAmount - inv.paidAmount > 0 ? `⚠️ *المتبقي آجل*: ${inv.
             {/* Thermal Receipt Box */}
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs font-mono space-y-2">
               <div className="text-center font-bold text-slate-800 pb-2 border-b border-dashed border-slate-300">
-                شركة المراعي للتوزيع والتوريدات
+                {branding.companyName}
                 <div className="text-[10px] text-emerald-800 font-bold mt-0.5">
-                  تحت إدارة: أ/ محمد عبدالله
+                  {branding.managerName}
                 </div>
                 <div className="text-[10px] text-slate-500 font-normal">
                   المندوب: {repName} | العميل: {selectedClient?.name}

@@ -34,7 +34,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   if (decoded.role === 'admin' || decoded.username === 'admin' || decoded.id === 'usr_admin') {
     return {
       ...decoded,
-      name: 'محمد عبدالله (المدير العام)',
+      name: decoded.name || 'المدير العام',
     };
   }
   return decoded;

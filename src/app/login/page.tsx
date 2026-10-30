@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { loginAction } from '@/lib/actions';
 import { Truck, ShieldCheck, UserCheck, AlertCircle, ArrowLeft, PackageCheck } from 'lucide-react';
+import { useBranding } from '@/components/common/BrandingProvider';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { branding } = useBranding();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -63,12 +65,12 @@ export default function LoginPage() {
             <Truck className="w-9 h-9 text-white" />
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight mb-1">المراعي للتوزيع والتوريدات</h1>
-          <p className="text-emerald-100 text-sm font-medium">تحت إدارة: أ/ محمد عبدالله</p>
-          <p className="text-emerald-200 text-xs mt-0.5">نظام إدارة المخزون والمبيعات الميدانية (B2B)</p>
+          <h1 className="text-2xl font-bold tracking-tight mb-1">{branding.companyName}</h1>
+          <p className="text-emerald-100 text-sm font-medium">{branding.managerName}</p>
+          <p className="text-emerald-200 text-xs mt-0.5">{branding.tagline}</p>
           <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-800/50 rounded-full text-xs text-emerald-200 border border-emerald-500/30">
             <PackageCheck className="w-3.5 h-3.5" />
-            <span>نظام FIFO الصارم للسلع سريعة التلف</span>
+            <span>نظام FIFO الصارم والتسوية اللحظية</span>
           </div>
         </div>
 
@@ -167,7 +169,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 text-center text-xs text-slate-500">
-          شركة المراعي • إدارة أ/ محمد عبدالله • توزيع الألبان والعصائر
+          {branding.companyName} • {branding.tagline}
         </div>
       </div>
     </div>
