@@ -144,7 +144,7 @@ export default function AdminNav({ userName }: AdminNavProps) {
                 <ShieldCheck className="w-4 h-4" />
               </div>
               <div className="text-right">
-                <div className="text-xs font-bold text-slate-800">{userName}</div>
+                <div className="text-xs font-bold text-slate-800">{branding.managerName || userName}</div>
                 <div className="text-[10px] text-emerald-600 font-medium">المدير العام</div>
               </div>
             </div>
@@ -253,7 +253,7 @@ export default function AdminNav({ userName }: AdminNavProps) {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm">تغيير كلمة مرور المدير العام</h3>
-                  <div className="text-[11px] text-slate-500">حساب {userName}</div>
+                  <div className="text-[11px] text-slate-500">حساب {branding.managerName || userName}</div>
                 </div>
               </div>
               <button

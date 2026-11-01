@@ -221,7 +221,7 @@ export default function AdminSettingsClientView({ initialStats, adminName }: Pro
         <div className="flex items-center gap-2">
           <div className="px-3.5 py-2 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>المدير: {adminName}</span>
+            <span>المدير: {branding.managerName || adminName}</span>
           </div>
         </div>
       </div>
@@ -299,14 +299,20 @@ export default function AdminSettingsClientView({ initialStats, adminName }: Pro
 
             {/* Manager / Organization Name */}
             <div>
-              <label className="block font-bold text-slate-700 mb-1">المدير العام / الجهة المسؤولة</label>
+              <label className="block font-bold text-slate-700 mb-1">
+                اسم المدير العام / المسؤول *
+              </label>
               <input
                 type="text"
+                required
                 value={brandForm.managerName}
                 onChange={(e) => setBrandForm({ ...brandForm, managerName: e.target.value })}
-                placeholder="مثال: تحت إدارة: أ/ أحمد محمد"
+                placeholder="مثال: أ/ أحمد محمد (المدير العام)"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-semibold focus:border-emerald-600 focus:outline-none"
               />
+              <span className="text-[10px] text-slate-400 mt-1 block">
+                يظهر أعلى لوحة التحكم، في البروفايل، وعلى إيصالات الفواتير
+              </span>
             </div>
 
             {/* Tagline */}

@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import { SessionUser, User } from '@/types';
 import { dbStore } from './store';
+import { getWhiteLabelConfig } from './white-label';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'al-waseet-super-secure-production-key-2026-b2b-dist';
 const COOKIE_NAME = 'al_waseet_session';
@@ -32,9 +33,10 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   const decoded = verifyToken(token);
   if (!decoded) return null;
   if (decoded.role === 'admin' || decoded.username === 'admin' || decoded.id === 'usr_admin') {
+    const branding = getWhiteLabelConfig();
     return {
       ...decoded,
-      name: decoded.name || 'المدير العام',
+      name: branding.managerName || decoded.name || 'المدير العام',
     };
   }
   return decoded;

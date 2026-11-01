@@ -28,7 +28,7 @@ export default async function AdminDashboardPage() {
   const recentInvoices = (await dbStore.getInvoices()).slice(0, 5);
 
   const branding = getWhiteLabelConfig();
-  const displayName = user?.name || branding.managerName;
+  const displayName = branding.managerName || user?.name || 'المدير العام';
 
   return (
     <div className="space-y-6">
