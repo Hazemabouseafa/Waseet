@@ -35,8 +35,9 @@ yarn-error.log*
 .env*
 !.env.example
 
-# local fallback data
-data/
+# local fallback data (keep demo seed db tracked)
+data/*
+!data/al_waseet_db.json
 
 
 # vercel

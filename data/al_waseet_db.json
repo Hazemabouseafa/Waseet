@@ -1,0 +1,888 @@
+{
+  "users": [
+    {
+      "id": "usr_admin",
+      "name": "محمد عبدالله (المدير العام)",
+      "username": "admin",
+      "password": "123",
+      "role": "admin",
+      "isActive": true,
+      "phone": "01000000001",
+      "assignedRoute": "المركز الرئيسي - الإدارة العامة",
+      "createdAt": "2026-10-16T15:28:43.486Z"
+    },
+    {
+      "id": "rep_1",
+      "name": "أحمد سمير (مندوب خط مدينة نصر ومصر الجديدة)",
+      "username": "rep1",
+      "password": "123",
+      "role": "rep",
+      "isActive": true,
+      "phone": "01012345671",
+      "assignedRoute": "خط شرق القاهرة - مدينة نصر ومصر الجديدة",
+      "createdAt": "2026-09-18T10:28:36.403Z"
+    },
+    {
+      "id": "rep_2",
+      "name": "محمود طارق (مندوب خط المعادي والتجمع)",
+      "username": "rep2",
+      "password": "123",
+      "role": "rep",
+      "isActive": true,
+      "phone": "01122334455",
+      "assignedRoute": "خط جنوب القاهرة - المعادي والتجمع الخامس",
+      "createdAt": "2026-09-23T10:28:36.403Z"
+    },
+    {
+      "id": "rep_3",
+      "name": "كريم عادل (مندوب خط الجيزة والمهندسين)",
+      "username": "rep3",
+      "password": "123",
+      "role": "rep",
+      "isActive": true,
+      "phone": "01288776655",
+      "assignedRoute": "خط الجيزة والمهندسين والدقي",
+      "createdAt": "2026-10-03T10:28:36.403Z"
+    }
+  ],
+  "products": [
+    {
+      "id": "prod_1",
+      "name": "حليب كامل الدسم 1 لتر (كرتونة 12 عبوة)",
+      "category": "dairy",
+      "shelfLifeDays": 7,
+      "price": 420,
+      "cost": 350,
+      "unit": "كرتونة",
+      "createdAt": "2026-09-23T10:28:36.403Z"
+    },
+    {
+      "id": "prod_2",
+      "name": "حليب خالي الدسم 1 لتر (كرتونة 12 عبوة)",
+      "category": "dairy",
+      "shelfLifeDays": 7,
+      "price": 430,
+      "cost": 360,
+      "unit": "كرتونة",
+      "createdAt": "2026-09-23T10:28:36.403Z"
+    },
+    {
+      "id": "prod_3",
+      "name": "عصير مانجو طبيعي 1 لتر (كرتونة 12 عبوة)",
+      "category": "juice",
+      "shelfLifeDays": 30,
+      "price": 380,
+      "cost": 305,
+      "unit": "كرتونة",
+      "createdAt": "2026-09-23T10:28:36.403Z"
+    },
+    {
+      "id": "prod_4",
+      "name": "عصير برتقال وتفاح 250 مل (كرتونة 27 عبوة)",
+      "category": "juice",
+      "shelfLifeDays": 60,
+      "price": 295,
+      "cost": 235,
+      "unit": "كرتونة",
+      "createdAt": "2026-09-25T10:28:36.403Z"
+    },
+    {
+      "id": "prod_5",
+      "name": "جبنة فيتا طبيعي 500 جم (كرتونة 12 علبة)",
+      "category": "أجبان ومنتجات ألبان",
+      "shelfLifeDays": 45,
+      "price": 540,
+      "cost": 450,
+      "unit": "كرتونة",
+      "createdAt": "2026-09-28T10:28:36.403Z"
+    },
+    {
+      "id": "prod_6",
+      "name": "زبادي طبيعي طازج (شرنك 24 كوب)",
+      "category": "dairy",
+      "shelfLifeDays": 10,
+      "price": 190,
+      "cost": 150,
+      "unit": "كرتونة",
+      "createdAt": "2026-09-28T10:28:36.403Z"
+    },
+    {
+      "id": "prod_7",
+      "name": "لبن رايب طازج 450 مل (كرتونة 12 زجاجة)",
+      "category": "dairy",
+      "shelfLifeDays": 7,
+      "price": 260,
+      "cost": 205,
+      "unit": "كرتونة",
+      "createdAt": "2026-10-03T10:28:36.403Z"
+    },
+    {
+      "id": "prod_8",
+      "name": "كريمة طهي وخفق 1 لتر (كرتونة 6 عبوات)",
+      "category": "أجبان ومنتجات ألبان",
+      "shelfLifeDays": 30,
+      "price": 680,
+      "cost": 560,
+      "unit": "كرتونة",
+      "createdAt": "2026-10-05T10:28:36.403Z"
+    }
+  ],
+  "batches": [
+    {
+      "id": "bat_1",
+      "productId": "prod_1",
+      "batchNumber": "BAT-201",
+      "initialQuantity": 120,
+      "quantity": 65,
+      "productionDate": "2026-11-01T10:28:36.403Z",
+      "expiryDate": "2026-11-08T10:28:36.403Z",
+      "status": "active",
+      "supplierId": "sup_1",
+      "purchaseId": "pur_1",
+      "purchaseItemId": "spi_1",
+      "unitCost": 350,
+      "createdAt": "2026-11-01T10:28:36.403Z"
+    },
+    {
+      "id": "bat_2",
+      "productId": "prod_2",
+      "batchNumber": "BAT-202",
+      "initialQuantity": 80,
+      "quantity": 42,
+      "productionDate": "2026-11-01T10:28:36.403Z",
+      "expiryDate": "2026-11-07T10:28:36.403Z",
+      "status": "active",
+      "unitCost": 360,
+      "createdAt": "2026-11-01T10:28:36.403Z"
+    },
+    {
+      "id": "bat_3",
+      "productId": "prod_3",
+      "batchNumber": "BAT-203",
+      "initialQuantity": 100,
+      "quantity": 58,
+      "productionDate": "2026-10-30T10:28:36.403Z",
+      "expiryDate": "2026-11-29T10:28:36.403Z",
+      "status": "active",
+      "supplierId": "sup_1",
+      "purchaseId": "pur_1",
+      "purchaseItemId": "spi_2",
+      "unitCost": 305,
+      "createdAt": "2026-10-31T10:28:36.403Z"
+    },
+    {
+      "id": "bat_4",
+      "productId": "prod_4",
+      "batchNumber": "BAT-204",
+      "initialQuantity": 90,
+      "quantity": 50,
+      "productionDate": "2026-10-28T10:28:36.403Z",
+      "expiryDate": "2026-12-27T10:28:36.403Z",
+      "status": "active",
+      "unitCost": 235,
+      "createdAt": "2026-10-28T10:28:36.403Z"
+    },
+    {
+      "id": "bat_5",
+      "productId": "prod_5",
+      "batchNumber": "BAT-205",
+      "initialQuantity": 80,
+      "quantity": 44,
+      "productionDate": "2026-10-29T10:28:36.403Z",
+      "expiryDate": "2026-12-13T10:28:36.403Z",
+      "status": "active",
+      "supplierId": "sup_2",
+      "purchaseId": "pur_2",
+      "purchaseItemId": "spi_3",
+      "unitCost": 450,
+      "createdAt": "2026-10-29T10:28:36.403Z"
+    },
+    {
+      "id": "bat_6",
+      "productId": "prod_6",
+      "batchNumber": "BAT-206",
+      "initialQuantity": 90,
+      "quantity": 28,
+      "productionDate": "2026-11-01T10:28:36.403Z",
+      "expiryDate": "2026-11-03T00:28:36.403Z",
+      "status": "expiring_soon",
+      "supplierId": "sup_2",
+      "purchaseId": "pur_2",
+      "purchaseItemId": "spi_4",
+      "unitCost": 150,
+      "createdAt": "2026-11-01T10:28:36.403Z"
+    },
+    {
+      "id": "bat_7",
+      "productId": "prod_7",
+      "batchNumber": "BAT-207",
+      "initialQuantity": 50,
+      "quantity": 7,
+      "productionDate": "2026-11-01T10:28:36.403Z",
+      "expiryDate": "2026-11-08T10:28:36.403Z",
+      "status": "active",
+      "unitCost": 205,
+      "createdAt": "2026-11-01T10:28:36.403Z"
+    },
+    {
+      "id": "bat_8",
+      "productId": "prod_8",
+      "batchNumber": "BAT-208",
+      "initialQuantity": 40,
+      "quantity": 5,
+      "productionDate": "2026-10-31T10:28:36.403Z",
+      "expiryDate": "2026-11-30T10:28:36.403Z",
+      "status": "active",
+      "unitCost": 560,
+      "createdAt": "2026-10-31T10:28:36.403Z"
+    }
+  ],
+  "repInventory": [
+    {
+      "id": "rinv_1",
+      "repId": "rep_1",
+      "productId": "prod_1",
+      "batchId": "bat_1",
+      "quantity": 18,
+      "updatedAt": "2026-11-02T07:28:36.403Z"
+    },
+    {
+      "id": "rinv_2",
+      "repId": "rep_1",
+      "productId": "prod_3",
+      "batchId": "bat_3",
+      "quantity": 15,
+      "updatedAt": "2026-11-02T07:28:36.403Z"
+    },
+    {
+      "id": "rinv_3",
+      "repId": "rep_1",
+      "productId": "prod_5",
+      "batchId": "bat_5",
+      "quantity": 10,
+      "updatedAt": "2026-11-02T07:28:36.403Z"
+    },
+    {
+      "id": "rinv_4",
+      "repId": "rep_2",
+      "productId": "prod_1",
+      "batchId": "bat_1",
+      "quantity": 14,
+      "updatedAt": "2026-11-02T08:28:36.403Z"
+    },
+    {
+      "id": "rinv_5",
+      "repId": "rep_2",
+      "productId": "prod_4",
+      "batchId": "bat_4",
+      "quantity": 20,
+      "updatedAt": "2026-11-02T08:28:36.403Z"
+    },
+    {
+      "id": "rinv_6",
+      "repId": "rep_3",
+      "productId": "prod_2",
+      "batchId": "bat_2",
+      "quantity": 12,
+      "updatedAt": "2026-11-02T06:28:36.403Z"
+    },
+    {
+      "id": "rinv_7",
+      "repId": "rep_3",
+      "productId": "prod_6",
+      "batchId": "bat_6",
+      "quantity": 16,
+      "updatedAt": "2026-11-02T06:28:36.403Z"
+    }
+  ],
+  "clients": [
+    {
+      "id": "cli_1",
+      "name": "هايبر ماركت الفردوس - مدينة نصر",
+      "phone": "01011122233",
+      "address": "شارع عباس العقاد - مدينة نصر",
+      "creditBalance": 6400,
+      "createdAt": "2026-09-23T10:28:36.403Z"
+    },
+    {
+      "id": "cli_2",
+      "name": "أسواق العائلة الحديثة - مصر الجديدة",
+      "phone": "01022233344",
+      "address": "ميدان الحجاز - مصر الجديدة",
+      "creditBalance": 0,
+      "createdAt": "2026-09-25T10:28:36.403Z"
+    },
+    {
+      "id": "cli_3",
+      "name": "سوبر ماركت الهدى والنور - المعادي",
+      "phone": "01133344455",
+      "address": "شارع 9 - المعادي",
+      "creditBalance": 4850,
+      "createdAt": "2026-09-28T10:28:36.403Z"
+    },
+    {
+      "id": "cli_4",
+      "name": "ماركت الرحاب المركزي - التجمع الخامس",
+      "phone": "01244455566",
+      "address": "شارع التسعين الشمالي - التجمع الخامس",
+      "creditBalance": 3200,
+      "createdAt": "2026-10-03T10:28:36.403Z"
+    },
+    {
+      "id": "cli_5",
+      "name": "سوبر ماركت الصفوة - المهندسين",
+      "phone": "01055566677",
+      "address": "شارع جامعة الدول العربية - المهندسين",
+      "creditBalance": 0,
+      "createdAt": "2026-10-08T10:28:36.403Z"
+    },
+    {
+      "id": "cli_6",
+      "name": "ميني ماركت البركة - الدقي",
+      "phone": "01166677788",
+      "address": "شارع مصدق - الدقي",
+      "creditBalance": 2150,
+      "createdAt": "2026-10-13T10:28:36.403Z"
+    }
+  ],
+  "invoices": [
+    {
+      "id": "inv_1",
+      "invoiceNumber": "INV-5001",
+      "repId": "rep_1",
+      "clientId": "cli_1",
+      "subtotal": 19400,
+      "discount": 400,
+      "returnsTotal": 0,
+      "totalAmount": 19000,
+      "paidAmount": 12600,
+      "paymentType": "credit",
+      "notes": "توريد صباحي لهايبر الفردوس - دفع جزء نقدي والباقي آجل",
+      "createdAt": "2026-11-01T08:28:36.403Z",
+      "items": [
+        {
+          "id": "ii_1",
+          "invoiceId": "inv_1",
+          "productId": "prod_1",
+          "batchId": "bat_1",
+          "quantity": 20,
+          "unitPrice": 420,
+          "totalPrice": 8400
+        },
+        {
+          "id": "ii_2",
+          "invoiceId": "inv_1",
+          "productId": "prod_3",
+          "batchId": "bat_3",
+          "quantity": 15,
+          "unitPrice": 380,
+          "totalPrice": 5700
+        },
+        {
+          "id": "ii_3",
+          "invoiceId": "inv_1",
+          "productId": "prod_5",
+          "batchId": "bat_5",
+          "quantity": 10,
+          "unitPrice": 530,
+          "totalPrice": 5300
+        }
+      ]
+    },
+    {
+      "id": "inv_2",
+      "invoiceNumber": "INV-5002",
+      "repId": "rep_1",
+      "clientId": "cli_2",
+      "subtotal": 13000,
+      "discount": 200,
+      "returnsTotal": 0,
+      "totalAmount": 12800,
+      "paidAmount": 12800,
+      "paymentType": "cash",
+      "notes": "فاتورة نقدية مسددة بالكامل",
+      "createdAt": "2026-11-02T05:28:36.403Z",
+      "items": [
+        {
+          "id": "ii_4",
+          "invoiceId": "inv_2",
+          "productId": "prod_2",
+          "batchId": "bat_2",
+          "quantity": 15,
+          "unitPrice": 430,
+          "totalPrice": 6450
+        },
+        {
+          "id": "ii_5",
+          "invoiceId": "inv_2",
+          "productId": "prod_6",
+          "batchId": "bat_6",
+          "quantity": 20,
+          "unitPrice": 190,
+          "totalPrice": 3800
+        },
+        {
+          "id": "ii_6",
+          "invoiceId": "inv_2",
+          "productId": "prod_4",
+          "batchId": "bat_4",
+          "quantity": 9,
+          "unitPrice": 305,
+          "totalPrice": 2750
+        }
+      ]
+    },
+    {
+      "id": "inv_3",
+      "invoiceNumber": "INV-5003",
+      "repId": "rep_2",
+      "clientId": "cli_3",
+      "subtotal": 14850,
+      "discount": 0,
+      "returnsTotal": 0,
+      "totalAmount": 14850,
+      "paidAmount": 10000,
+      "paymentType": "credit",
+      "notes": "توريد خط المعادي",
+      "createdAt": "2026-11-02T06:28:36.403Z",
+      "items": [
+        {
+          "id": "ii_7",
+          "invoiceId": "inv_3",
+          "productId": "prod_1",
+          "batchId": "bat_1",
+          "quantity": 15,
+          "unitPrice": 420,
+          "totalPrice": 6300
+        },
+        {
+          "id": "ii_8",
+          "invoiceId": "inv_3",
+          "productId": "prod_5",
+          "batchId": "bat_5",
+          "quantity": 10,
+          "unitPrice": 540,
+          "totalPrice": 5400
+        },
+        {
+          "id": "ii_9",
+          "invoiceId": "inv_3",
+          "productId": "prod_4",
+          "batchId": "bat_4",
+          "quantity": 11,
+          "unitPrice": 286.36,
+          "totalPrice": 3150
+        }
+      ]
+    },
+    {
+      "id": "inv_4",
+      "invoiceNumber": "INV-5004",
+      "repId": "rep_3",
+      "clientId": "cli_5",
+      "subtotal": 11200,
+      "discount": 200,
+      "returnsTotal": 0,
+      "totalAmount": 11000,
+      "paidAmount": 11000,
+      "paymentType": "cash",
+      "notes": "توريد نقدي خط المهندسين",
+      "createdAt": "2026-11-02T08:28:36.403Z",
+      "items": [
+        {
+          "id": "ii_10",
+          "invoiceId": "inv_4",
+          "productId": "prod_3",
+          "batchId": "bat_3",
+          "quantity": 20,
+          "unitPrice": 380,
+          "totalPrice": 7600
+        },
+        {
+          "id": "ii_11",
+          "invoiceId": "inv_4",
+          "productId": "prod_6",
+          "batchId": "bat_6",
+          "quantity": 19,
+          "unitPrice": 189.47,
+          "totalPrice": 3600
+        }
+      ]
+    },
+    {
+      "id": "inv_5",
+      "invoiceNumber": "WH-5005",
+      "repId": "usr_admin",
+      "clientId": "cli_4",
+      "subtotal": 16200,
+      "discount": 200,
+      "returnsTotal": 0,
+      "totalAmount": 16000,
+      "paidAmount": 12800,
+      "paymentType": "credit",
+      "notes": "بيع جملة مباشر من المخزن الرئيسي بمعرفة الإدارة",
+      "createdAt": "2026-11-02T09:28:36.403Z",
+      "items": [
+        {
+          "id": "ii_12",
+          "invoiceId": "inv_5",
+          "productId": "prod_8",
+          "batchId": "bat_8",
+          "quantity": 15,
+          "unitPrice": 680,
+          "totalPrice": 10200
+        },
+        {
+          "id": "ii_13",
+          "invoiceId": "inv_5",
+          "productId": "prod_7",
+          "batchId": "bat_7",
+          "quantity": 23,
+          "unitPrice": 260.87,
+          "totalPrice": 6000
+        }
+      ]
+    }
+  ],
+  "returns": [
+    {
+      "id": "ret_1",
+      "repId": "rep_1",
+      "productId": "prod_6",
+      "batchId": "bat_6",
+      "quantity": 2,
+      "amount": 380,
+      "reason": "damaged",
+      "notes": "عبوات تالفة أثناء النقل",
+      "createdAt": "2026-11-01T10:28:36.403Z"
+    }
+  ],
+  "collections": [
+    {
+      "id": "col_1",
+      "repId": "rep_1",
+      "clientId": "cli_1",
+      "amount": 4500,
+      "notes": "تحصيل دفعة نقدية من حساب الأسبوع الماضي",
+      "createdAt": "2026-11-02T07:28:36.403Z"
+    },
+    {
+      "id": "col_2",
+      "repId": "rep_2",
+      "clientId": "cli_3",
+      "amount": 3200,
+      "notes": "تحصيل نقدي ميداني",
+      "createdAt": "2026-11-02T08:28:36.403Z"
+    },
+    {
+      "id": "col_3",
+      "repId": "usr_admin",
+      "clientId": "cli_6",
+      "amount": 2850,
+      "notes": "تحصيل مباشر بمقر الإدارة والخزينة",
+      "createdAt": "2026-11-02T09:28:36.403Z"
+    }
+  ],
+  "settlements": [
+    {
+      "id": "set_1",
+      "repId": "rep_1",
+      "date": "2026-11-01",
+      "expectedCash": 29900,
+      "actualCash": 29900,
+      "cashDifference": 0,
+      "status": "balanced",
+      "notes": "تقفيل مطابق تماماً للنقدية وعهدة السيارة",
+      "createdAt": "2026-11-01T10:28:36.403Z"
+    },
+    {
+      "id": "set_2",
+      "repId": "rep_2",
+      "date": "2026-11-01",
+      "expectedCash": 13200,
+      "actualCash": 13050,
+      "cashDifference": -150,
+      "status": "discrepancy",
+      "notes": "عجز بسيط 150 ج.م مسجل على حساب المندوب",
+      "createdAt": "2026-11-01T10:28:36.403Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": "cat_dairy",
+      "name": "ألبان طازجة",
+      "defaultShelfLifeDays": 7,
+      "createdAt": "2026-09-18T10:28:36.403Z"
+    },
+    {
+      "id": "cat_juice",
+      "name": "عصائر طبيعية",
+      "defaultShelfLifeDays": 90,
+      "createdAt": "2026-09-18T10:28:36.403Z"
+    },
+    {
+      "id": "cat_cheese",
+      "name": "أجبان ومنتجات ألبان",
+      "defaultShelfLifeDays": 60,
+      "createdAt": "2026-09-18T10:28:36.403Z"
+    },
+    {
+      "id": "cat_yogurt",
+      "name": "زبادي ورايب",
+      "defaultShelfLifeDays": 14,
+      "createdAt": "2026-09-18T10:28:36.403Z"
+    }
+  ],
+  "advances": [
+    {
+      "id": "adv_1",
+      "repId": "rep_1",
+      "amount": 1000,
+      "reason": "مصاريف وقود وصيانة سريعة للسيارة بالخط",
+      "status": "approved",
+      "managerNotes": "تم الاعتماد والصرف من الخزينة",
+      "createdAt": "2026-10-31T10:28:36.403Z",
+      "updatedAt": "2026-10-31T10:28:36.403Z"
+    },
+    {
+      "id": "adv_2",
+      "repId": "rep_3",
+      "amount": 1500,
+      "reason": "سلفة شخصية تخصم من راتب نهاية الشهر",
+      "status": "pending",
+      "createdAt": "2026-11-02T08:28:36.403Z"
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "sup_1",
+      "name": "شركة المراعي الخضراء للألبان والعصائر",
+      "phone": "01099887766",
+      "address": "المنطقة الصناعية الثالثة - مدينة السادات",
+      "totalDue": 18500,
+      "createdAt": "2026-09-18T10:28:36.403Z"
+    },
+    {
+      "id": "sup_2",
+      "name": "مصنع النيل للمنتجات الغذائية والأجبان",
+      "phone": "01233445566",
+      "address": "المنطقة الصناعية - العاشر من رمضان",
+      "totalDue": 11200,
+      "createdAt": "2026-09-23T10:28:36.403Z"
+    },
+    {
+      "id": "sup_3",
+      "name": "شركة الوادي لتعبئة العصائر الطبيعية",
+      "phone": "01155667788",
+      "address": "المنطقة الصناعية - السادس من أكتوبر",
+      "totalDue": 0,
+      "createdAt": "2026-09-28T10:28:36.403Z"
+    }
+  ],
+  "supplierPurchases": [
+    {
+      "id": "pur_1",
+      "purchaseNumber": "PUR-1001",
+      "supplierId": "sup_1",
+      "totalAmount": 72500,
+      "paidAmount": 54000,
+      "remainingDue": 18500,
+      "paymentType": "credit",
+      "notes": "توريد دفعة ألبان وعصائر أسبوعية للمخزن الرئيسي",
+      "createdAt": "2026-10-31T10:28:36.403Z",
+      "items": [
+        {
+          "id": "spi_1",
+          "purchaseId": "pur_1",
+          "productId": "prod_1",
+          "productName": "حليب كامل الدسم 1 لتر (كرتونة 12 عبوة)",
+          "quantity": 120,
+          "unitCost": 350,
+          "totalCost": 42000,
+          "productionDate": "2026-10-31T10:28:36.403Z",
+          "expiryDate": "2026-11-07T10:28:36.403Z",
+          "batchId": "bat_1",
+          "createdAt": "2026-10-31T10:28:36.403Z"
+        },
+        {
+          "id": "spi_2",
+          "purchaseId": "pur_1",
+          "productId": "prod_3",
+          "productName": "عصير مانجو طبيعي 1 لتر (كرتونة 12 عبوة)",
+          "quantity": 100,
+          "unitCost": 305,
+          "totalCost": 30500,
+          "productionDate": "2026-10-30T10:28:36.403Z",
+          "expiryDate": "2026-11-29T10:28:36.403Z",
+          "batchId": "bat_3",
+          "createdAt": "2026-10-31T10:28:36.403Z"
+        }
+      ]
+    },
+    {
+      "id": "pur_2",
+      "purchaseNumber": "PUR-1002",
+      "supplierId": "sup_2",
+      "totalAmount": 49500,
+      "paidAmount": 38300,
+      "remainingDue": 11200,
+      "paymentType": "credit",
+      "notes": "توريد أجبان وزبادي طازج",
+      "createdAt": "2026-11-01T10:28:36.403Z",
+      "items": [
+        {
+          "id": "spi_3",
+          "purchaseId": "pur_2",
+          "productId": "prod_5",
+          "productName": "جبنة فيتا طبيعي 500 جم (كرتونة 12 علبة)",
+          "quantity": 80,
+          "unitCost": 450,
+          "totalCost": 36000,
+          "productionDate": "2026-10-29T10:28:36.403Z",
+          "expiryDate": "2026-12-13T10:28:36.403Z",
+          "batchId": "bat_5",
+          "createdAt": "2026-10-29T10:28:36.403Z"
+        },
+        {
+          "id": "spi_4",
+          "purchaseId": "pur_2",
+          "productId": "prod_6",
+          "productName": "زبادي طبيعي طازج (شرنك 24 كوب)",
+          "quantity": 90,
+          "unitCost": 150,
+          "totalCost": 13500,
+          "productionDate": "2026-11-01T10:28:36.403Z",
+          "expiryDate": "2026-11-03T10:28:36.403Z",
+          "batchId": "bat_6",
+          "createdAt": "2026-11-01T10:28:36.403Z"
+        }
+      ]
+    }
+  ],
+  "supplierPurchaseItems": [
+    {
+      "id": "spi_1",
+      "purchaseId": "pur_1",
+      "productId": "prod_1",
+      "productName": "حليب كامل الدسم 1 لتر (كرتونة 12 عبوة)",
+      "quantity": 120,
+      "unitCost": 350,
+      "totalCost": 42000,
+      "productionDate": "2026-10-31T10:28:36.403Z",
+      "expiryDate": "2026-11-07T10:28:36.403Z",
+      "batchId": "bat_1",
+      "createdAt": "2026-10-31T10:28:36.403Z"
+    },
+    {
+      "id": "spi_2",
+      "purchaseId": "pur_1",
+      "productId": "prod_3",
+      "productName": "عصير مانجو طبيعي 1 لتر (كرتونة 12 عبوة)",
+      "quantity": 100,
+      "unitCost": 305,
+      "totalCost": 30500,
+      "productionDate": "2026-10-30T10:28:36.403Z",
+      "expiryDate": "2026-11-29T10:28:36.403Z",
+      "batchId": "bat_3",
+      "createdAt": "2026-10-31T10:28:36.403Z"
+    },
+    {
+      "id": "spi_3",
+      "purchaseId": "pur_2",
+      "productId": "prod_5",
+      "productName": "جبنة فيتا طبيعي 500 جم (كرتونة 12 علبة)",
+      "quantity": 80,
+      "unitCost": 450,
+      "totalCost": 36000,
+      "productionDate": "2026-10-29T10:28:36.403Z",
+      "expiryDate": "2026-12-13T10:28:36.403Z",
+      "batchId": "bat_5",
+      "createdAt": "2026-10-29T10:28:36.403Z"
+    },
+    {
+      "id": "spi_4",
+      "purchaseId": "pur_2",
+      "productId": "prod_6",
+      "productName": "زبادي طبيعي طازج (شرنك 24 كوب)",
+      "quantity": 90,
+      "unitCost": 150,
+      "totalCost": 13500,
+      "productionDate": "2026-11-01T10:28:36.403Z",
+      "expiryDate": "2026-11-03T10:28:36.403Z",
+      "batchId": "bat_6",
+      "createdAt": "2026-11-01T10:28:36.403Z"
+    }
+  ],
+  "supplierPayments": [
+    {
+      "id": "spay_1",
+      "supplierId": "sup_1",
+      "amount": 15000,
+      "notes": "دفعة نقدية من حساب المراعي الخضراء",
+      "createdAt": "2026-11-01T10:28:36.403Z"
+    }
+  ],
+  "employees": [
+    {
+      "id": "emp_1",
+      "name": "خالد عبد الرحمن",
+      "phone": "01098765432",
+      "role": "أمين المخزن الرئيسي",
+      "baseSalary": 8500,
+      "createdAt": "2026-09-13T10:28:36.403Z"
+    },
+    {
+      "id": "emp_2",
+      "name": "مصطفى حسن",
+      "phone": "01187654321",
+      "role": "محاسب المبيعات والخزينة",
+      "baseSalary": 9500,
+      "createdAt": "2026-09-13T10:28:36.403Z"
+    },
+    {
+      "id": "emp_3",
+      "name": "سيد إبراهيم",
+      "phone": "01276543210",
+      "role": "مسؤول التحميل واللوجستيات",
+      "baseSalary": 6500,
+      "createdAt": "2026-09-18T10:28:36.403Z"
+    }
+  ],
+  "payrollPayments": [
+    {
+      "id": "pay_1",
+      "employeeId": "emp_1",
+      "amount": 4000,
+      "month": "2026-11",
+      "paymentDate": "2026-10-30T10:28:36.403Z",
+      "notes": "دفعة تحت حساب راتب الشهر",
+      "createdAt": "2026-10-30T10:28:36.403Z"
+    }
+  ],
+  "repTargets": [
+    {
+      "id": "trg_1",
+      "repId": "rep_1",
+      "month": "2026-11",
+      "targetAmount": 45000,
+      "notes": "تارجت خط شرق القاهرة",
+      "createdAt": "2026-10-23T10:28:36.403Z"
+    },
+    {
+      "id": "trg_2",
+      "repId": "rep_2",
+      "month": "2026-11",
+      "targetAmount": 35000,
+      "notes": "تارجت خط المعادي والتجمع",
+      "createdAt": "2026-10-23T10:28:36.403Z"
+    },
+    {
+      "id": "trg_3",
+      "repId": "rep_3",
+      "month": "2026-11",
+      "targetAmount": 30000,
+      "notes": "تارجت خط الجيزة والمهندسين",
+      "createdAt": "2026-10-23T10:28:36.403Z"
+    }
+  ]
+}
