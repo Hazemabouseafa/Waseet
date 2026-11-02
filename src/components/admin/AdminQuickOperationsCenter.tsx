@@ -9,6 +9,7 @@ import {
   createBatchAction,
   createProductAndBatchAction,
   createClientAction,
+  seedDemoDataAction,
 } from '@/lib/actions';
 import { Product, Client } from '@/types';
 import {
@@ -270,6 +271,24 @@ export default function AdminQuickOperationsCenter({
     }
   };
 
+  const [seedingDemo, setSeedingDemo] = useState(false);
+
+  const handleLoadDemoData = async () => {
+    setSeedingDemo(true);
+    setFeedback(null);
+    try {
+      const res = await seedDemoDataAction();
+      if (res.success) {
+        setFeedback({ type: 'success', text: res.message || 'تم تحميل البيانات التجريبية بنجاح!' });
+        router.refresh();
+      } else {
+        setFeedback({ type: 'error', text: res.error || 'فشل تحميل البيانات التجريبية' });
+      }
+    } finally {
+      setSeedingDemo(false);
+    }
+  };
+
   const selectedColClient = clients.find((c) => c.id === colClientId);
 
   return (
@@ -328,8 +347,32 @@ export default function AdminQuickOperationsCenter({
               <PackagePlus className="w-4 h-4 text-emerald-400" />
               <span>+ إدخال بضاعة / صنف للمخزن</span>
             </button>
+
+            <button
+              type="button"
+              onClick={handleLoadDemoData}
+              disabled={seedingDemo}
+              title="تحميل بيانات تجريبية متكاملة لعرض النظام للعملاء"
+              className="px-3.5 py-2.5 rounded-2xl bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border border-indigo-200 text-xs font-black flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>{seedingDemo ? 'جاري تحميل الديمو...' : 'تحميل بيانات تجريبية (Demo)'}</span>
+            </button>
           </div>
         </div>
+
+        {feedback && !activeModal && (
+          <div
+            className={`p-3.5 rounded-2xl border flex items-center gap-2 text-xs font-bold ${
+              feedback.type === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                : 'bg-rose-50 border-rose-200 text-rose-900'
+            }`}
+          >
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{feedback.text}</span>
+          </div>
+        )}
 
         {/* Complete ERP Snapshot Cards (المخزون والسيولة والديون) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">

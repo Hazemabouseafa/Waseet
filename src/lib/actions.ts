@@ -1481,5 +1481,48 @@ export async function restoreBackupAction(jsonString: string) {
   }
 }
 
+export async function seedDemoDataAction() {
+  try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      return { success: false, error: 'غير مصرح لك بإجراء هذه العملية', message: undefined };
+    }
+
+    const res = await dbStore.seedDemoData();
+
+    const paths = [
+      '/',
+      '/admin',
+      '/admin/invoices',
+      '/admin/inventory',
+      '/admin/dispatch',
+      '/admin/suppliers',
+      '/admin/profit-loss',
+      '/admin/clients',
+      '/admin/reps',
+      '/admin/settlements',
+      '/admin/advances',
+      '/admin/employees',
+      '/admin/analytics',
+      '/admin/settings',
+      '/rep',
+    ];
+    paths.forEach((p) => {
+      try {
+        revalidatePath(p);
+      } catch {}
+    });
+
+    return { success: true, message: res.message, error: undefined };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || 'حدث خطأ أثناء تحميل البيانات التجريبية',
+      message: undefined,
+    };
+  }
+}
+
+
 
 

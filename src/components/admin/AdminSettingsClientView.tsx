@@ -2,7 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { wipeDatabaseAction, restoreBackupAction, getDatabaseStatsAction } from '@/lib/actions';
+import {
+  wipeDatabaseAction,
+  restoreBackupAction,
+  getDatabaseStatsAction,
+  seedDemoDataAction,
+} from '@/lib/actions';
 import { useBranding } from '@/components/common/BrandingProvider';
 import {
   Settings,
@@ -176,6 +181,33 @@ export default function AdminSettingsClientView({ initialStats, adminName }: Pro
   const [isWiping, setIsWiping] = useState(false);
   const [wipeError, setWipeError] = useState<string | null>(null);
   const [wipeSuccess, setWipeSuccess] = useState<string | null>(null);
+  const [isSeedingDemo, setIsSeedingDemo] = useState(false);
+
+  const handleLoadDemoData = async () => {
+    setIsSeedingDemo(true);
+    setRestoreMsg(null);
+    try {
+      const res = await seedDemoDataAction();
+      if (res.success) {
+        setRestoreMsg({
+          type: 'success',
+          text: res.message || 'تم تحميل البيانات التجريبية بنجاح!',
+        });
+        const statsRes = await getDatabaseStatsAction();
+        if (statsRes.success && statsRes.stats) {
+          setStats(statsRes.stats);
+        }
+        router.refresh();
+      } else {
+        setRestoreMsg({
+          type: 'error',
+          text: res.error || 'فشل تحميل البيانات التجريبية',
+        });
+      }
+    } finally {
+      setIsSeedingDemo(false);
+    }
+  };
 
   const totalRecordsCount = Object.values(stats).reduce((a, b) => a + b, 0);
 
@@ -516,6 +548,25 @@ export default function AdminSettingsClientView({ initialStats, adminName }: Pro
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleLoadDemoData}
+              disabled={isSeedingDemo}
+              className="w-full sm:w-auto px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black shadow-md shadow-indigo-600/20 transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+            >
+              {isSeedingDemo ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>جاري تجهيز الديمو...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>تحميل بيانات تجريبية (Demo)</span>
+                </>
+              )}
+            </button>
+
             <input
               ref={fileInputRef}
               type="file"
