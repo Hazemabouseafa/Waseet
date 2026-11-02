@@ -93,7 +93,7 @@ export default function LoginPage() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="أدخل اسم المستخدم (مثلاً: admin أو rep_omar)"
+                placeholder="أدخل اسم المستخدم (مثلاً: admin أو rep1)"
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition text-slate-800 text-sm"
               />
             </div>
@@ -151,16 +151,16 @@ export default function LoginPage() {
 
               <button
                 type="button"
-                onClick={() => quickLogin('rep_omar', '123')}
+                onClick={() => quickLogin('rep1', '123')}
                 disabled={isLoading}
-                className="p-3 bg-slate-50 hover:bg-teal-50 border border-slate-200 hover:border-teal-300 rounded-xl text-right transition flex items-center gap-2 group"
+                className="p-3 bg-slate-50 hover:bg-teal-50 border border-slate-200 hover:border-teal-300 rounded-xl text-right transition flex items-center gap-2 group cursor-pointer"
               >
                 <div className="w-8 h-8 rounded-lg bg-teal-100 group-hover:bg-teal-200 flex items-center justify-center text-teal-800">
                   <UserCheck className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="text-xs font-bold text-slate-800">مندوب مبيعات</div>
-                  <div className="text-[10px] text-slate-500">عمر - تطبيق الجوال</div>
+                  <div className="text-[10px] text-slate-500">أحمد سمير - واجهة المندوب</div>
                 </div>
               </button>
             </div>

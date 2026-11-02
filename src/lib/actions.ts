@@ -6,14 +6,35 @@ import { signToken, setAuthCookie, clearAuthCookie, getCurrentUser } from './aut
 import { AdvanceStatus } from '@/types';
 
 export async function loginAction(formData: FormData) {
-  const username = formData.get('username') as string;
-  const password = formData.get('password') as string;
+  const username = (formData.get('username') as string)?.trim();
+  const password = (formData.get('password') as string)?.trim();
 
   if (!username || !password) {
     return { success: false, error: 'يرجى إدخال اسم المستخدم وكلمة المرور' };
   }
 
-  const user = await dbStore.getUserByUsername(username);
+  let user = await dbStore.getUserByUsername(username);
+
+  // Fallback for Quick Demo Rep Login: if rep_omar or rep1 is clicked and not found, pick the first active rep or auto-create a demo rep
+  if (!user && (username === 'rep1' || username === 'rep_omar' || username === 'rep')) {
+    const allUsers = await dbStore.getUsers();
+    const allReps = allUsers.filter((u) => u.role === 'rep');
+    const activeRep = allReps.find((r) => r.isActive) || allReps[0];
+    if (activeRep) {
+      user = activeRep;
+    } else {
+      user = await dbStore.createUser({
+        name: 'أحمد سمير (مندوب مبيعات ميداني)',
+        username: 'rep1',
+        password: '123',
+        role: 'rep',
+        isActive: true,
+        phone: '01012345671',
+        assignedRoute: 'خط شرق القاهرة - مدينة نصر ومصر الجديدة',
+      });
+    }
+  }
+
   if (!user) {
     return { success: false, error: 'اسم المستخدم أو كلمة المرور غير صحيحة' };
   }
