@@ -671,6 +671,7 @@ class DatabaseStore {
       assignedQty: number;
       remainingQty: number;
       productionDate: string;
+      expiryDate?: string;
       createdAt: string;
     }[] = [];
 
@@ -699,6 +700,7 @@ class DatabaseStore {
           assignedQty,
           remainingQty,
           productionDate: item.productionDate,
+          expiryDate: item.expiryDate,
           createdAt: purchase.createdAt,
         });
       }
@@ -712,6 +714,7 @@ class DatabaseStore {
     batchNumber: string;
     quantity: number;
     productionDate: string;
+    expiryDate?: string;
     purchaseId?: string;
     purchaseItemId?: string;
     unitCost?: number;
@@ -726,6 +729,22 @@ class DatabaseStore {
       if (isNaN(qty) || qty <= 0) {
         throw new Error('يرجى إدخال كمية صحيحة للتشغيلة أكبر من الصفر');
       }
+
+      const resolveExpiry = (prodDateStr: string, shelfDays: number, fallbackExpiry?: string) => {
+        if (data.expiryDate) {
+          const parsed = new Date(data.expiryDate);
+          if (!isNaN(parsed.getTime())) {
+            return parsed.toISOString();
+          }
+        }
+        if (fallbackExpiry) {
+          const parsed = new Date(fallbackExpiry);
+          if (!isNaN(parsed.getTime())) {
+            return parsed.toISOString();
+          }
+        }
+        return calculateExpiry(prodDateStr, shelfDays);
+      };
 
       // Case 1: Linked to a Supplier Purchase Invoice
       if (data.purchaseId && data.purchaseItemId) {
@@ -770,7 +789,7 @@ class DatabaseStore {
         const shelfDays = prod.shelfLifeDays || 1;
         const prodDate =
           data.productionDate || purchaseItem.productionDate || new Date().toISOString();
-        const expiryDate = calculateExpiry(prodDate, shelfDays);
+        const expiryDate = resolveExpiry(prodDate, shelfDays, purchaseItem.expiryDate);
         const status = determineBatchStatus(expiryDate, qty);
 
         const unitCost = purchaseItem.unitCost || prod.cost || 0;
@@ -810,7 +829,7 @@ class DatabaseStore {
 
       const shelfDays = prod.shelfLifeDays || 1;
       const prodDate = data.productionDate || new Date().toISOString();
-      const expiryDate = calculateExpiry(prodDate, shelfDays);
+      const expiryDate = resolveExpiry(prodDate, shelfDays);
       const status = determineBatchStatus(expiryDate, qty);
 
       const unitCost =
@@ -836,6 +855,60 @@ class DatabaseStore {
 
       db.batches.push(newBatch);
       return newBatch;
+    });
+  }
+
+  async updateBatch(
+    id: string,
+    updates: {
+      expiryDate?: string;
+      productionDate?: string;
+      quantity?: number;
+      batchNumber?: string;
+    }
+  ): Promise<InventoryBatch> {
+    return this.transaction((db) => {
+      if (!db.batches) db.batches = [];
+      const idx = db.batches.findIndex((b) => b.id === id);
+      if (idx === -1) throw new Error('التشغيلة المحددة غير موجودة بالمخزن');
+
+      const current = db.batches[idx];
+      const nextQty =
+        updates.quantity !== undefined && !isNaN(Number(updates.quantity))
+          ? Math.max(0, Number(updates.quantity))
+          : current.quantity;
+
+      let nextExpiry = current.expiryDate;
+      if (updates.expiryDate) {
+        const parsedExp = new Date(updates.expiryDate);
+        if (!isNaN(parsedExp.getTime())) {
+          nextExpiry = parsedExp.toISOString();
+        }
+      }
+
+      let nextProdDate = current.productionDate;
+      if (updates.productionDate) {
+        const parsedProd = new Date(updates.productionDate);
+        if (!isNaN(parsedProd.getTime())) {
+          nextProdDate = parsedProd.toISOString();
+        }
+      }
+
+      const updated: InventoryBatch = {
+        ...current,
+        batchNumber:
+          updates.batchNumber !== undefined && updates.batchNumber.trim()
+            ? updates.batchNumber.trim()
+            : current.batchNumber,
+        quantity: nextQty,
+        initialQuantity: Math.max(current.initialQuantity, nextQty),
+        productionDate: nextProdDate,
+        expiryDate: nextExpiry,
+        status: determineBatchStatus(nextExpiry, nextQty),
+      };
+
+      db.batches[idx] = updated;
+      return updated;
     });
   }
 
@@ -2003,6 +2076,7 @@ class DatabaseStore {
       quantity: number;
       unitCost: number;
       productionDate: string;
+      expiryDate?: string;
     }[];
   }): Promise<SupplierPurchase> {
     return this.transaction((db) => {
@@ -2044,7 +2118,13 @@ class DatabaseStore {
 
         const shelfDays = prod.shelfLifeDays || 1;
         const productionDate = item.productionDate || new Date().toISOString();
-        const expiryDate = calculateExpiry(productionDate, shelfDays);
+        let expiryDate = calculateExpiry(productionDate, shelfDays);
+        if (item.expiryDate) {
+          const parsedExp = new Date(item.expiryDate);
+          if (!isNaN(parsedExp.getTime())) {
+            expiryDate = parsedExp.toISOString();
+          }
+        }
         const status = determineBatchStatus(expiryDate, qty);
 
         const batchNumber = `BAT-SUP-${Date.now().toString().slice(-5)}-${Math.floor(Math.random() * 900 + 100)}`;

@@ -46,6 +46,7 @@ interface NewPurchaseItemLine {
   quantity: number;
   unitCost: number;
   productionDate: string;
+  expiryDate: string;
 }
 
 export default function SuppliersClientView({
@@ -125,12 +126,19 @@ export default function SuppliersClientView({
   const [purchasePaymentType, setPurchasePaymentType] = useState<'cash' | 'credit'>('credit');
   const [purchasePaidAmount, setPurchasePaidAmount] = useState<string>('0');
   const [purchaseNotes, setPurchaseNotes] = useState<string>('');
+  const defaultExpiryStr = (days = 7) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split('T')[0];
+  };
+
   const [purchaseLines, setPurchaseLines] = useState<NewPurchaseItemLine[]>([
     {
       productId: products[0]?.id || '',
       quantity: 50,
       unitCost: products[0]?.cost || 0,
       productionDate: new Date().toISOString().split('T')[0],
+      expiryDate: defaultExpiryStr(products[0]?.shelfLifeDays || 7),
     },
   ]);
 
@@ -171,6 +179,7 @@ export default function SuppliersClientView({
         quantity: 20,
         unitCost: products[0]?.cost || 0,
         productionDate: new Date().toISOString().split('T')[0],
+        expiryDate: defaultExpiryStr(products[0]?.shelfLifeDays || 7),
       },
     ]);
   };
@@ -293,6 +302,7 @@ export default function SuppliersClientView({
         quantity: Number(line.quantity),
         unitCost: Number(line.unitCost),
         productionDate: line.productionDate || new Date().toISOString(),
+        expiryDate: line.expiryDate ? new Date(line.expiryDate).toISOString() : undefined,
       })),
     });
 
@@ -1015,7 +1025,7 @@ export default function SuppliersClientView({
                       className="p-3 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center"
                     >
                       {/* Product select */}
-                      <div className="sm:col-span-4">
+                      <div className="sm:col-span-3">
                         <label className="block text-[10px] font-bold text-slate-500 mb-0.5">الصنف:</label>
                         <select
                           value={line.productId}
@@ -1025,6 +1035,7 @@ export default function SuppliersClientView({
                             handleUpdatePurchaseLine(idx, {
                               productId: pId,
                               unitCost: pr?.cost || 0,
+                              expiryDate: defaultExpiryStr(pr?.shelfLifeDays || 7),
                             });
                           }}
                           className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 font-bold bg-white text-xs"
@@ -1051,7 +1062,7 @@ export default function SuppliersClientView({
 
                       {/* Unit Cost */}
                       <div className="sm:col-span-2">
-                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">سعر التكلفة (ج.م):</label>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">التكلفة (ج.م):</label>
                         <input
                           type="number"
                           min="0"
@@ -1063,13 +1074,25 @@ export default function SuppliersClientView({
                       </div>
 
                       {/* Production Date */}
-                      <div className="sm:col-span-3">
-                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">تاريخ الإنتاج:</label>
+                      <div className="sm:col-span-2">
+                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">الإنتاج:</label>
                         <input
                           type="date"
                           value={line.productionDate}
                           onChange={(e) => handleUpdatePurchaseLine(idx, { productionDate: e.target.value })}
                           className="w-full px-2 py-1 rounded-xl border border-slate-200 text-xs bg-white font-mono"
+                        />
+                      </div>
+
+                      {/* Expiry Date (controlled by Manager) */}
+                      <div className="sm:col-span-2">
+                        <label className="block text-[10px] font-black text-emerald-800 mb-0.5">الصلاحية (يدوي):</label>
+                        <input
+                          type="date"
+                          required
+                          value={line.expiryDate}
+                          onChange={(e) => handleUpdatePurchaseLine(idx, { expiryDate: e.target.value })}
+                          className="w-full px-2 py-1 rounded-xl border-2 border-emerald-400 text-xs bg-white font-mono font-bold text-emerald-950"
                         />
                       </div>
 

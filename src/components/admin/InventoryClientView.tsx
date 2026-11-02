@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Product, InventoryBatch, Category } from '@/types';
 import {
   createBatchAction,
+  updateBatchAction,
   createProductAction,
   updateProductAction,
   createCategoryAction,
@@ -194,7 +195,21 @@ export default function InventoryClientView({
   const [batchNumber, setBatchNumber] = useState('');
   const [batchQuantity, setBatchQuantity] = useState(50);
   const [productionDate, setProductionDate] = useState(new Date().toISOString().slice(0, 16));
+  const [expiryDate, setExpiryDate] = useState(() => {
+    const d = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    return d.toISOString().slice(0, 16);
+  });
   const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editBatch, setEditBatch] = useState<
+    (InventoryBatch & { product: Product; hoursRemaining: number }) | null
+  >(null);
+
+  const applyExpiryPresetDays = (days: number, baseDateStr?: string) => {
+    const base = baseDateStr ? new Date(baseDateStr) : new Date(productionDate || Date.now());
+    const validBase = isNaN(base.getTime()) ? new Date() : base;
+    const target = new Date(validBase.getTime() + days * 24 * 60 * 60 * 1000);
+    return target.toISOString().slice(0, 16);
+  };
 
   // Inline product fields when adding an incoming batch for a brand new product
   const [newProductName, setNewProductName] = useState('');
@@ -294,6 +309,9 @@ export default function InventoryClientView({
         );
         formData.append('quantity', qty.toString());
         formData.append('productionDate', new Date(productionDate).toISOString());
+        if (expiryDate) {
+          formData.append('expiryDate', new Date(expiryDate).toISOString());
+        }
         formData.append('purchaseId', selectedPurchaseItem.purchaseId);
         formData.append('purchaseItemId', selectedPurchaseItem.purchaseItemId);
 
@@ -304,10 +322,11 @@ export default function InventoryClientView({
           const prod =
             productsList.find((p) => p.id === selectedPurchaseItem.productId) || selectedProduct;
           if (prod) {
+            const expMs = new Date(res.batch.expiryDate).getTime();
             const newBat = {
               ...res.batch,
               product: prod,
-              hoursRemaining: (prod.shelfLifeDays || 1) * 24,
+              hoursRemaining: Math.round((expMs - Date.now()) / (1000 * 60 * 60)),
             };
             setBatchesList((prev) => [newBat, ...prev]);
           }
@@ -355,6 +374,9 @@ export default function InventoryClientView({
       );
       formData.append('quantity', qty.toString());
       formData.append('productionDate', new Date(productionDate).toISOString());
+      if (expiryDate) {
+        formData.append('expiryDate', new Date(expiryDate).toISOString());
+      }
 
       const res = await createBatchAction(formData);
       setLoading(false);
@@ -362,10 +384,11 @@ export default function InventoryClientView({
       if (res.success && res.batch) {
         const prod = productsList.find((p) => p.id === batchProductId) || selectedProduct;
         if (prod) {
+          const expMs = new Date(res.batch.expiryDate).getTime();
           const newBat = {
             ...res.batch,
             product: prod,
-            hoursRemaining: (prod.shelfLifeDays || 1) * 24,
+            hoursRemaining: Math.round((expMs - Date.now()) / (1000 * 60 * 60)),
           };
           setBatchesList((prev) => [newBat, ...prev]);
         }
@@ -385,6 +408,42 @@ export default function InventoryClientView({
     } catch (err: any) {
       setLoading(false);
       setMsg({ type: 'error', text: err.message || 'حدث خطأ غير متوقع' });
+    }
+  };
+
+  const handleUpdateBatch = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editBatch) return;
+    setLoading(true);
+    setMsg(null);
+    const formData = new FormData(e.currentTarget);
+    const expVal = formData.get('expiryDate') as string;
+    const prodVal = formData.get('productionDate') as string;
+    if (expVal) formData.set('expiryDate', new Date(expVal).toISOString());
+    if (prodVal) formData.set('productionDate', new Date(prodVal).toISOString());
+
+    const res = await updateBatchAction(editBatch.id, formData);
+    setLoading(false);
+
+    if (res.success && res.batch) {
+      const expMs = new Date(res.batch.expiryDate).getTime();
+      setBatchesList((prev) =>
+        prev.map((b) =>
+          b.id === res.batch!.id
+            ? {
+                ...b,
+                ...res.batch!,
+                hoursRemaining: Math.round((expMs - Date.now()) / (1000 * 60 * 60)),
+              }
+            : b
+        )
+      );
+      setMsg({ type: 'success', text: res.message || 'تم تحديث صلاحية وبيانات التشغيلة بنجاح' });
+      setEditBatch(null);
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('app:sync'));
+      router.refresh();
+    } else {
+      setMsg({ type: 'error', text: res.error || 'فشل تحديث بيانات التشغيلة' });
     }
   };
 
@@ -758,21 +817,32 @@ export default function InventoryClientView({
                         )}
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setDeleteTarget({
-                            type: 'batch',
-                            id: batch.id,
-                            name: `تشغيلة رقم ${batch.batchNumber} (${batch.product.name})`,
-                          })
-                        }
-                        title="حذف التشغيلة"
-                        className="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition flex items-center gap-1 border border-rose-200 active:scale-95"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>حذف</span>
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setEditBatch(batch)}
+                          title="تعديل الصلاحية والكمية"
+                          className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition flex items-center gap-1 border border-emerald-200 active:scale-95"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                          <span>الصلاحية</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDeleteTarget({
+                              type: 'batch',
+                              id: batch.id,
+                              name: `تشغيلة رقم ${batch.batchNumber} (${batch.product.name})`,
+                            })
+                          }
+                          title="حذف التشغيلة"
+                          className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition flex items-center gap-1 border border-rose-200 active:scale-95"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>حذف</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -880,20 +950,30 @@ export default function InventoryClientView({
                           )}
                         </td>
                         <td className="py-3 pl-4 text-center">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setDeleteTarget({
-                                type: 'batch',
-                                id: batch.id,
-                                name: `تشغيلة رقم ${batch.batchNumber} (${batch.product.name})`,
-                              })
-                            }
-                            title="حذف التشغيلة"
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setEditBatch(batch)}
+                              title="تعديل تاريخ الصلاحية أو الكمية"
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDeleteTarget({
+                                  type: 'batch',
+                                  id: batch.id,
+                                  name: `تشغيلة رقم ${batch.batchNumber} (${batch.product.name})`,
+                                })
+                              }
+                              title="حذف التشغيلة"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1127,36 +1207,72 @@ export default function InventoryClientView({
                   </div>
                 </div>
 
-                {/* 5. Production Date */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    تاريخ وتوقيت الإنتاج *
-                  </label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={productionDate}
-                    onChange={(e) => setProductionDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-mono"
-                  />
-                </div>
+                {/* 5. Production & Manual Expiry Dates (Controlled directly by Manager) */}
+                <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
+                      <Calendar className="w-4 h-4 text-emerald-600" />
+                      <span>تحديد تاريخ الصلاحية (يتحكم فيه المدير مباشرة)</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-white px-2 py-0.5 rounded-full border border-emerald-200">
+                      تحكم يدوي كامل
+                    </span>
+                  </div>
 
-                {/* 6. Automatic Expiry Calculation Box */}
-                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1">
-                  <div className="font-bold flex items-center gap-1.5 text-emerald-800">
-                    <Sparkles className="w-4 h-4 text-emerald-600" />
-                    <span>الاحتساب التلقائي للصلاحية بنظام FIFO:</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        تاريخ وتوقيت الإنتاج *
+                      </label>
+                      <input
+                        type="datetime-local"
+                        required
+                        value={productionDate}
+                        onChange={(e) => setProductionDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-black text-emerald-900 mb-1">
+                        تاريخ انتهاء الصلاحية (يحدده المدير) *
+                      </label>
+                      <input
+                        type="datetime-local"
+                        required
+                        value={expiryDate}
+                        onChange={(e) => setExpiryDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border-2 border-emerald-400 bg-white text-xs focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 font-mono font-bold text-emerald-950"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    مدة الصلاحية المبرمجة للمنتج:{' '}
-                    <strong>
-                      {selectedProduct?.shelfLifeDays === 1
-                        ? '24 ساعة (يوم واحد)'
-                        : `${selectedProduct?.shelfLifeDays || 1} أيام`}
-                    </strong>
-                  </div>
-                  <div className="pt-1 border-t border-emerald-200 font-bold text-emerald-950">
-                    تاريخ الانتهاء المحسوب: {getProjectedExpiry()}
+
+                  {/* Quick Preset Chips for Manager convenience */}
+                  <div className="pt-1">
+                    <div className="text-[10px] font-bold text-emerald-800 mb-1.5">
+                      اختصارات سريعة لضبط الصلاحية من تاريخ الإنتاج (أو اختر أي تاريخ يدوي بالأعلى):
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { label: '+ يوم (24س)', days: 1 },
+                        { label: '+ 3 أيام', days: 3 },
+                        { label: '+ 7 أيام', days: 7 },
+                        { label: '+ 15 يوم', days: 15 },
+                        { label: '+ شهر', days: 30 },
+                        { label: '+ 3 شهور', days: 90 },
+                        { label: '+ 6 شهور', days: 180 },
+                        { label: '+ سنة', days: 365 },
+                      ].map((preset) => (
+                        <button
+                          key={preset.days}
+                          type="button"
+                          onClick={() => applyExpiryPresetDays(preset.days)}
+                          className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-600 hover:text-white text-emerald-800 border border-emerald-200 text-[10px] font-bold transition shadow-2xs"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -1714,6 +1830,112 @@ export default function InventoryClientView({
                   className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition"
                 >
                   {loading ? 'جاري التحديث...' : 'حفظ التعديلات'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Batch Expiry & Quantity directly by Manager */}
+      {editBatch && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">
+                    تعديل صلاحية وبيانات التشغيلة: {editBatch.batchNumber}
+                  </h3>
+                  <div className="text-[11px] text-slate-500">
+                    {editBatch.product.name}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditBatch(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateBatch} className="space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    رقم التشغيلة *
+                  </label>
+                  <input
+                    type="text"
+                    name="batchNumber"
+                    required
+                    defaultValue={editBatch.batchNumber}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    الكمية المتبقية بالمخزن *
+                  </label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    min={0}
+                    required
+                    defaultValue={editBatch.quantity}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-black text-emerald-700"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  تاريخ الإنتاج *
+                </label>
+                <input
+                  type="datetime-local"
+                  name="productionDate"
+                  required
+                  defaultValue={new Date(editBatch.productionDate).toISOString().slice(0, 16)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono"
+                />
+              </div>
+
+              <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
+                <label className="block text-xs font-black text-emerald-950 mb-1">
+                  تاريخ انتهاء الصلاحية الجديد (يحدده المدير) *
+                </label>
+                <input
+                  type="datetime-local"
+                  name="expiryDate"
+                  required
+                  defaultValue={new Date(editBatch.expiryDate).toISOString().slice(0, 16)}
+                  className="w-full px-3 py-2 rounded-xl border-2 border-emerald-400 bg-white text-xs font-mono font-bold text-emerald-950"
+                />
+                <div className="text-[10px] text-emerald-700 mt-1.5 font-medium">
+                  سيتم إعادة حساب الساعات المتبقية وترتيب الأولوية (FIFO) فوراً بناءً على التاريخ الذي تحدده.
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditBatch(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition"
+                >
+                  {loading ? 'جاري الحفظ...' : 'حفظ الصلاحية والبيانات'}
                 </button>
               </div>
             </form>

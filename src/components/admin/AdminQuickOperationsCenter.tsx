@@ -89,12 +89,23 @@ export default function AdminQuickOperationsCenter({
   const [stockProductId, setStockProductId] = useState(productsWithStock[0]?.id || '');
   const [stockQty, setStockQty] = useState('50');
   const [stockCost, setStockCost] = useState('');
+  const [stockExpiryDate, setStockExpiryDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + (productsWithStock[0]?.shelfLifeDays || 7));
+    return d.toISOString().slice(0, 16);
+  });
   const [newProdName, setNewProdName] = useState('');
   const [newProdCategory, setNewProdCategory] = useState(categories[0] || 'ألبان');
   const [newProdPrice, setNewProdPrice] = useState('');
   const [newProdCost, setNewProdCost] = useState('');
   const [newProdUnit, setNewProdUnit] = useState('كرتونة');
   const [newProdShelfDays, setNewProdShelfDays] = useState('7');
+
+  const applyQuickExpiryDays = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    setStockExpiryDate(d.toISOString().slice(0, 16));
+  };
 
   const lowStockProducts = productsWithStock.filter((p) => p.warehouseStock <= 10);
 
@@ -220,6 +231,9 @@ export default function AdminQuickOperationsCenter({
       const fd = new FormData();
       fd.set('quantity', stockQty);
       fd.set('productionDate', new Date().toISOString());
+      if (stockExpiryDate) {
+        fd.set('expiryDate', new Date(stockExpiryDate).toISOString());
+      }
 
       if (stockMode === 'existing') {
         fd.set('productId', stockProductId);
@@ -991,6 +1005,38 @@ export default function AdminQuickOperationsCenter({
                   </div>
                 </>
               )}
+
+              <div className="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200 space-y-2">
+                <label className="block text-xs font-black text-emerald-950">
+                  تاريخ انتهاء صلاحية الدفعة (يحدده المدير بنفسه) *
+                </label>
+                <input
+                  type="datetime-local"
+                  required
+                  value={stockExpiryDate}
+                  onChange={(e) => setStockExpiryDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border-2 border-emerald-400 bg-white text-xs font-mono font-bold text-emerald-950"
+                />
+                <div className="flex flex-wrap gap-1 pt-0.5">
+                  {[
+                    { label: '+ يوم', days: 1 },
+                    { label: '+ 3 أيام', days: 3 },
+                    { label: '+ 7 أيام', days: 7 },
+                    { label: '+ 15 يوم', days: 15 },
+                    { label: '+ شهر', days: 30 },
+                    { label: '+ 6 شهور', days: 180 },
+                  ].map((p) => (
+                    <button
+                      key={p.days}
+                      type="button"
+                      onClick={() => applyQuickExpiryDays(p.days)}
+                      className="px-2 py-0.5 rounded-lg bg-white hover:bg-emerald-600 hover:text-white text-emerald-800 border border-emerald-200 text-[10px] font-bold transition"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <button
                 type="submit"

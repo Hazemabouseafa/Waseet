@@ -169,6 +169,7 @@ export async function createBatchAction(formData: FormData) {
     const batchNumber = ((formData.get('batchNumber') as string) || '').trim();
     const quantity = parseInt(formData.get('quantity') as string, 10);
     const productionDate = (formData.get('productionDate') as string) || new Date().toISOString();
+    const expiryDate = ((formData.get('expiryDate') as string) || '').trim() || undefined;
     const purchaseId = ((formData.get('purchaseId') as string) || '').trim() || undefined;
     const purchaseItemId = ((formData.get('purchaseItemId') as string) || '').trim() || undefined;
     const unitCostRaw = formData.get('unitCost') as string;
@@ -190,6 +191,7 @@ export async function createBatchAction(formData: FormData) {
       batchNumber: batchNumber || `BAT-${Date.now().toString().slice(-6)}`,
       quantity,
       productionDate,
+      expiryDate,
       purchaseId,
       purchaseItemId,
       unitCost,
@@ -256,6 +258,44 @@ export async function updateProductAction(productId: string, formData: FormData)
   }
 }
 
+export async function updateBatchAction(batchId: string, formData: FormData) {
+  try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      return { success: false, error: 'غير مصرح لك بتعديل صلاحية أو بيانات التشغيلات' };
+    }
+
+    const batchNumber = ((formData.get('batchNumber') as string) || '').trim();
+    const expiryDate = ((formData.get('expiryDate') as string) || '').trim();
+    const productionDate = ((formData.get('productionDate') as string) || '').trim();
+    const quantityRaw = formData.get('quantity') as string;
+    const quantity =
+      quantityRaw !== null && quantityRaw !== '' ? parseInt(quantityRaw, 10) : undefined;
+
+    if (!expiryDate) {
+      return { success: false, error: 'يرجى تحديد تاريخ انتهاء الصلاحية للتشغيلة' };
+    }
+
+    const updated = await dbStore.updateBatch(batchId, {
+      batchNumber: batchNumber || undefined,
+      expiryDate,
+      productionDate: productionDate || undefined,
+      quantity: quantity !== undefined && !isNaN(quantity) ? quantity : undefined,
+    });
+
+    revalidatePath('/admin/inventory');
+    revalidatePath('/admin/dispatch');
+    revalidatePath('/admin');
+    return {
+      success: true,
+      message: `تم تحديث تاريخ الصلاحية وبيانات التشغيلة (${updated.batchNumber}) بنجاح`,
+      batch: updated,
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'فشل تحديث بيانات التشغيلة' };
+  }
+}
+
 export async function createProductAction(formData: FormData) {
   try {
     const user = await getCurrentUser();
@@ -312,6 +352,7 @@ export async function createProductAndBatchAction(formData: FormData) {
     const batchNumber = ((formData.get('batchNumber') as string) || '').trim();
     const quantity = parseInt(formData.get('quantity') as string, 10);
     const productionDate = (formData.get('productionDate') as string) || new Date().toISOString();
+    const expiryDate = ((formData.get('expiryDate') as string) || '').trim() || undefined;
 
     if (!productName) {
       return { success: false, error: 'يرجى كتابة اسم الصنف أو المنتج الوارد' };
@@ -341,6 +382,7 @@ export async function createProductAndBatchAction(formData: FormData) {
       batchNumber: batchNumber || `BAT-${Date.now().toString().slice(-6)}`,
       quantity,
       productionDate,
+      expiryDate,
     });
 
     revalidatePath('/admin/inventory');
@@ -804,6 +846,7 @@ export async function createSupplierPurchaseAction(data: {
     quantity: number;
     unitCost: number;
     productionDate: string;
+    expiryDate?: string;
   }[];
 }) {
   try {

@@ -28,10 +28,8 @@ import {
   TrendingUp,
   Settings,
   Menu,
-  Search,
-  PlusCircle,
-  Sparkles,
-  ChevronLeft,
+  PanelRightClose,
+  PanelRightOpen,
 } from 'lucide-react';
 
 interface AdminNavProps {
@@ -43,9 +41,9 @@ export default function AdminNav({ userName }: AdminNavProps) {
   const router = useRouter();
   const { branding } = useBranding();
 
-  // Mobile right drawer state
+  // Desktop collapse state & Mobile drawer state
+  const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [navSearch, setNavSearch] = useState('');
 
   // Password Modal State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -58,43 +56,42 @@ export default function AdminNav({ userName }: AdminNavProps) {
 
   const navSections = [
     {
-      title: 'الرئيسية والملخص المباشر',
+      title: 'الرئيسية',
       items: [
         {
           href: '/admin',
-          label: 'مركز التحكم والعمليات',
-          subtitle: 'بيع مباشر • مؤشرات • تنبيهات',
+          label: 'الرئيسية والعمليات السريعة',
           icon: LayoutDashboard,
-          badge: 'الرئيسية',
+          accent: 'text-emerald-400',
         },
         {
           href: '/admin/analytics',
           label: 'تقارير المبيعات والتحليلات',
-          subtitle: 'الأعلى مبيعاً وأداء الخطوط',
           icon: BarChart3,
+          accent: 'text-sky-400',
         },
       ],
     },
     {
-      title: 'إدارة المخازن والسيارات',
+      title: 'المخازن والسيارات',
       items: [
         {
           href: '/admin/inventory',
-          label: 'المخزن الرئيسي والأصناف',
-          subtitle: 'إضافة أصناف • تشغيلات • أسعار',
+          label: 'المخزن الرئيسي والصلاحيات',
           icon: Boxes,
+          accent: 'text-emerald-400',
         },
         {
           href: '/admin/dispatch',
           label: 'تحميل وتفريغ السيارات',
-          subtitle: 'صرف عهدة للمندوب أو إرجاع للمخزن',
           icon: Truck,
+          accent: 'text-blue-400',
         },
         {
           href: '/admin/settlements',
           label: 'جرد وتسوية نهاية اليوم',
-          subtitle: 'مطابقة النقدية وعهدة السيارات',
           icon: Scale,
+          accent: 'text-amber-400',
         },
       ],
     },
@@ -104,60 +101,55 @@ export default function AdminNav({ userName }: AdminNavProps) {
         {
           href: '/admin/invoices',
           label: 'فواتير المبيعات والخصومات',
-          subtitle: 'فواتير المناديب والمخزن المباشر',
           icon: FileText,
+          accent: 'text-teal-400',
         },
         {
           href: '/admin/clients',
           label: 'العملاء وتحصيل المديونيات',
-          subtitle: 'كشف حساب • تحصيل نقدي فوري',
           icon: Store,
+          accent: 'text-amber-400',
         },
         {
           href: '/admin/suppliers',
           label: 'الموردين وفواتير الشراء',
-          subtitle: 'توريد بضاعة وسداد مستحقات',
           icon: Building2,
+          accent: 'text-purple-400',
         },
       ],
     },
     {
-      title: 'المناديب والخزينة والحسابات',
+      title: 'الخزينة والمناديب والنظام',
       items: [
         {
           href: '/admin/profit-loss',
           label: 'الأرباح والخسائر والخزينة',
-          subtitle: 'صافي الربح ورصيد الخزنة الفعلي',
           icon: TrendingUp,
+          accent: 'text-emerald-400',
         },
         {
           href: '/admin/reps',
           label: 'إدارة المناديب والتارجت',
-          subtitle: 'حسابات المناديب والتارجت الشهري',
           icon: Users,
+          accent: 'text-indigo-400',
         },
         {
           href: '/admin/advances',
           label: 'سلف وعهد المناديب',
-          subtitle: 'اعتماد وصرف السلف المالية',
           icon: HandCoins,
+          accent: 'text-amber-400',
         },
         {
           href: '/admin/employees',
           label: 'شؤون الموظفين والرواتب',
-          subtitle: 'المرتبات الشهرية والمصروفات الإدارية',
           icon: Wallet,
+          accent: 'text-cyan-400',
         },
-      ],
-    },
-    {
-      title: 'النظام والـ White-Label',
-      items: [
         {
           href: '/admin/settings',
-          label: 'الهوية التجارية والنسخ الاحتياطي',
-          subtitle: 'تغيير اسم الشركة والمدير والألوان',
+          label: 'الهوية التجارية والإعدادات',
           icon: Settings,
+          accent: 'text-slate-300',
         },
       ],
     },
@@ -208,220 +200,241 @@ export default function AdminNav({ userName }: AdminNavProps) {
     }
   };
 
-  const renderSidebarContent = (isMobile = false) => (
-    <div className="flex flex-col h-full bg-slate-900 text-white select-none">
-      {/* Brand Header */}
-      <div className="p-4 border-b border-slate-800/80 flex items-center justify-between gap-3 bg-slate-950/40">
-        <Link
-          href="/admin"
-          onClick={() => isMobile && setMobileMenuOpen(false)}
-          className="flex items-center gap-3 min-w-0 group"
-        >
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-600/25 shrink-0 group-hover:scale-105 transition">
-            <Truck className="w-6 h-6" />
-          </div>
-          <div className="min-w-0">
-            <div className="font-black text-base text-white leading-tight truncate">
-              {branding.appName}
-            </div>
-            <div className="text-[11px] text-emerald-400 font-bold truncate mt-0.5">
-              {branding.companyName}
-            </div>
-          </div>
-        </Link>
+  const renderSidebarContent = (isMobile = false) => {
+    const isMini = !isMobile && collapsed;
 
-        {isMobile && (
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(false)}
-            className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white"
+    return (
+      <div className="flex flex-col h-full bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white select-none">
+        {/* Top Brand & Collapse Toggle */}
+        <div
+          className={`h-16 px-3.5 border-b border-white/10 flex items-center ${
+            isMini ? 'justify-center' : 'justify-between'
+          } gap-2`}
+        >
+          <Link
+            href="/admin"
+            onClick={() => isMobile && setMobileMenuOpen(false)}
+            className="flex items-center gap-2.5 min-w-0 group"
+            title={branding.appName}
           >
-            <X className="w-5 h-5" />
-          </button>
-        )}
-      </div>
-
-      {/* Manager Profile Card inside Right Sidebar */}
-      <div className="px-4 py-3 bg-slate-800/40 border-b border-slate-800/80 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-xs font-black text-white truncate">
-              {branding.managerName || userName}
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 shrink-0 group-hover:scale-105 transition">
+              <Truck className="w-5 h-5" />
             </div>
-            <div className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>المدير العام للنظام</span>
-            </div>
-          </div>
-        </div>
-        <Link
-          href="/admin/settings"
-          onClick={() => isMobile && setMobileMenuOpen(false)}
-          title="تعديل اسم المدير والهوية"
-          className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-emerald-600 text-[10px] font-bold text-slate-300 hover:text-white transition shrink-0"
-        >
-          تخصيص
-        </Link>
-      </div>
+            {!isMini && (
+              <div className="min-w-0">
+                <div className="font-black text-sm text-white leading-tight truncate">
+                  {branding.appName}
+                </div>
+                <div className="text-[10px] text-emerald-400 font-bold truncate mt-0.5">
+                  {branding.companyName}
+                </div>
+              </div>
+            )}
+          </Link>
 
-      {/* Quick Filter inside Sidebar */}
-      <div className="px-3 pt-3 pb-1">
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
-          <input
-            type="text"
-            value={navSearch}
-            onChange={(e) => setNavSearch(e.target.value)}
-            placeholder="ابحث في أقسام البرنامج..."
-            className="w-full pr-8 pl-3 py-1.5 rounded-xl bg-slate-800/70 border border-slate-700/70 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition"
-          />
-          {navSearch && (
+          {isMobile ? (
             <button
               type="button"
-              onClick={() => setNavSearch('')}
-              className="absolute left-2.5 top-2 text-slate-400 hover:text-white"
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-1.5 rounded-xl bg-white/10 text-slate-300 hover:text-white"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-5 h-5" />
             </button>
+          ) : (
+            !isMini && (
+              <button
+                type="button"
+                onClick={() => setCollapsed(true)}
+                title="تصغير الشريط الجانبي"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              >
+                <PanelRightClose className="w-4 h-4" />
+              </button>
+            )
           )}
         </div>
-      </div>
 
-      {/* Categorized Navigation Links (Right Sidebar) */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-4 scrollbar-thin">
-        {navSections.map((section) => {
-          const filteredItems = section.items.filter(
-            (item) =>
-              !navSearch.trim() ||
-              item.label.includes(navSearch.trim()) ||
-              item.subtitle.includes(navSearch.trim())
-          );
-          if (filteredItems.length === 0) return null;
+        {/* Expand button when collapsed */}
+        {isMini && (
+          <div className="px-2 pt-2 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setCollapsed(false)}
+              title="توسيع الشريط الجانبي"
+              className="w-10 h-8 rounded-xl bg-white/5 hover:bg-emerald-600/30 text-emerald-400 flex items-center justify-center transition cursor-pointer"
+            >
+              <PanelRightOpen className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
-          return (
-            <div key={section.title} className="space-y-1">
-              <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                <span>{section.title}</span>
-                <span className="h-px flex-1 bg-slate-800 mr-2" />
+        {/* Sleek Manager Pill */}
+        <div className="px-3 py-2.5 border-b border-white/5">
+          {isMini ? (
+            <Link
+              href="/admin/settings"
+              title={`المدير العام: ${branding.managerName || userName} (تعديل الهوية)`}
+              className="w-10 h-10 mx-auto rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition"
+            >
+              <ShieldCheck className="w-5 h-5" />
+            </Link>
+          ) : (
+            <div className="px-3 py-2 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-black text-white truncate">
+                    {branding.managerName || userName}
+                  </div>
+                  <div className="text-[10px] text-emerald-400/90 font-semibold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>المدير العام</span>
+                  </div>
+                </div>
               </div>
+              <Link
+                href="/admin/settings"
+                onClick={() => isMobile && setMobileMenuOpen(false)}
+                className="px-2 py-1 rounded-lg bg-white/10 hover:bg-emerald-600 text-[10px] font-bold text-slate-200 hover:text-white transition shrink-0"
+              >
+                الهوية
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Clean Single-Line Navigation Pills */}
+        <div className="flex-1 overflow-y-auto px-2.5 py-2.5 space-y-3.5 scrollbar-thin">
+          {navSections.map((section) => (
+            <div key={section.title} className="space-y-1">
+              {!isMini && (
+                <div className="px-3 pb-0.5 text-[10px] font-bold text-slate-400/80">
+                  {section.title}
+                </div>
+              )}
 
               <div className="space-y-1">
-                {filteredItems.map((item) => {
+                {section.items.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname === item.href;
+
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={() => isMobile && setMobileMenuOpen(false)}
-                      className={`group flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl transition-all ${
+                      title={item.label}
+                      className={`group relative flex items-center ${
+                        isMini ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'
+                      } rounded-xl text-xs transition-all duration-150 ${
                         isActive
-                          ? 'bg-gradient-to-l from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-900/40 font-black'
-                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white font-semibold'
+                          ? 'bg-gradient-to-l from-emerald-600 to-teal-600 text-white font-black shadow-md shadow-emerald-950/50'
+                          : 'text-slate-300 hover:bg-white/[0.06] hover:text-white font-bold'
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition ${
-                            isActive
-                              ? 'bg-white/20 text-white'
-                              : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-emerald-400'
-                          }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-xs sm:text-[13px] leading-snug truncate">
-                            {item.label}
-                          </div>
-                          <div
-                            className={`text-[10px] truncate ${
-                              isActive ? 'text-emerald-100' : 'text-slate-400'
-                            }`}
-                          >
-                            {item.subtitle}
-                          </div>
-                        </div>
+                      {/* Active Right-Edge Indicator Pill */}
+                      {isActive && !isMini && (
+                        <span className="absolute right-0 top-2 bottom-2 w-1 rounded-l-full bg-white shadow-xs" />
+                      )}
+
+                      <div
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : `bg-white/[0.04] ${item.accent} group-hover:bg-white/10`
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
                       </div>
 
-                      {item.badge ? (
-                        <span
-                          className={`px-2 py-0.5 text-[9px] font-black rounded-full shrink-0 ${
-                            isActive
-                              ? 'bg-white text-emerald-700'
-                              : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                          }`}
-                        >
-                          {item.badge}
-                        </span>
-                      ) : (
-                        <ChevronLeft
-                          className={`w-3.5 h-3.5 shrink-0 transition-transform ${
-                            isActive
-                              ? 'text-white translate-x-0'
-                              : 'text-slate-600 opacity-0 group-hover:opacity-100'
-                          }`}
-                        />
-                      )}
+                      {!isMini && <span className="truncate">{item.label}</span>}
                     </Link>
                   );
                 })}
               </div>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
 
-      {/* Bottom Actions inside Right Sidebar */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950/60 space-y-2">
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setMobileMenuOpen(false);
-              setPassError(null);
-              setPassSuccess(null);
-              setShowPasswordModal(true);
-            }}
-            className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition border border-slate-700"
-          >
-            <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
-            <span>الباسوورد</span>
-          </button>
+        {/* Sleek Footer Actions */}
+        <div className="p-2.5 border-t border-white/10 bg-slate-950/60">
+          {isMini ? (
+            <div className="flex flex-col items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setPassError(null);
+                  setPassSuccess(null);
+                  setShowPasswordModal(true);
+                }}
+                title="تغيير كلمة المرور"
+                className="w-10 h-9 rounded-xl bg-white/5 hover:bg-white/15 text-emerald-400 flex items-center justify-center transition cursor-pointer"
+              >
+                <KeyRound className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                title="تسجيل الخروج"
+                className="w-10 h-9 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setPassError(null);
+                  setPassSuccess(null);
+                  setShowPasswordModal(true);
+                }}
+                className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-white/[0.06] hover:bg-white/15 text-slate-200 text-[11px] font-bold transition cursor-pointer"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
+                <span>كلمة المرور</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white text-xs font-bold transition border border-rose-500/30"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>خروج آمن</span>
-          </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white text-[11px] font-bold transition cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>خروج آمن</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>
-      {/* DESKTOP RIGHT SIDEBAR (شريط التبويبات الرأسي على اليمين) */}
-      <aside className="hidden lg:block w-72 shrink-0 bg-slate-900 border-l border-slate-800 min-h-screen sticky top-0 h-screen z-40 shadow-xl">
+      {/* DESKTOP RIGHT SIDEBAR (شريط التبويبات الرأسي الأنيق على اليمين) */}
+      <aside
+        className={`hidden lg:block ${
+          collapsed ? 'w-20' : 'w-64'
+        } shrink-0 bg-slate-950 border-l border-slate-800/80 min-h-screen sticky top-0 h-screen z-40 shadow-xl transition-all duration-200`}
+      >
         {renderSidebarContent(false)}
       </aside>
 
       {/* MOBILE / TABLET TOP BAR + RIGHT DRAWER TRIGGER */}
-      <div className="lg:hidden sticky top-0 z-40 bg-slate-900 text-white border-b border-slate-800 px-3 py-2.5 flex items-center justify-between gap-2 shadow-md">
+      <div className="lg:hidden sticky top-0 z-40 bg-slate-950 text-white border-b border-slate-800 px-3 py-2.5 flex items-center justify-between gap-2 shadow-md">
         <div className="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
-            className="p-2 rounded-xl bg-emerald-600 text-white shadow-sm flex items-center gap-1.5 text-xs font-black shrink-0"
+            className="px-3 py-2 rounded-xl bg-emerald-600 text-white shadow-sm flex items-center gap-1.5 text-xs font-black shrink-0"
           >
-            <Menu className="w-5 h-5" />
-            <span>القائمة</span>
+            <Menu className="w-4 h-4" />
+            <span>الأقسام</span>
           </button>
           <div className="min-w-0">
             <div className="font-black text-sm text-white truncate">{branding.appName}</div>
@@ -450,7 +463,7 @@ export default function AdminNav({ userName }: AdminNavProps) {
             className="fixed inset-0 bg-black/60 backdrop-blur-xs"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="relative w-80 max-w-[85vw] h-full bg-slate-900 z-10 shadow-2xl">
+          <div className="relative w-72 max-w-[85vw] h-full bg-slate-950 z-10 shadow-2xl">
             {renderSidebarContent(true)}
           </div>
         </div>
