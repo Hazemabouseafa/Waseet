@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { User, Product, InventoryBatch, RepInventory } from '@/types';
-import { dispatchStockAction } from '@/lib/actions';
+import { dispatchStockAction, returnStockFromRepAction } from '@/lib/actions';
 import {
   Truck,
   ArrowDown,
@@ -16,6 +16,7 @@ import {
   Sparkles,
   UserPlus,
   Boxes,
+  RotateCcw,
 } from 'lucide-react';
 
 interface RepVanData {
@@ -69,6 +70,39 @@ export default function DispatchClientView({
       router.refresh();
     } else {
       setStatus({ type: 'error', message: res.error || 'فشلت عملية التحويل' });
+    }
+  };
+
+  const handleReturnToWarehouse = async (
+    repId: string,
+    batchId: string,
+    maxQty: number,
+    productName: string
+  ) => {
+    const input = window.prompt(
+      `أدخل الكمية المراد إرجاعها للمخزن الرئيسي من "${productName}" (المتاح بالسيارة: ${maxQty}):`,
+      String(maxQty)
+    );
+    if (!input) return;
+    const qty = parseInt(input, 10);
+    if (isNaN(qty) || qty <= 0 || qty > maxQty) {
+      setStatus({
+        type: 'error',
+        message: `يرجى إدخال كمية صحيحة بين 1 و ${maxQty}`,
+      });
+      return;
+    }
+
+    setLoading(true);
+    setStatus(null);
+    const res = await returnStockFromRepAction(repId, batchId, qty);
+    setLoading(false);
+
+    if (res.success) {
+      setStatus({ type: 'success', message: res.message || 'تم إرجاع البضاعة للمخزن بنجاح' });
+      router.refresh();
+    } else {
+      setStatus({ type: 'error', message: res.error || 'فشل إرجاع البضاعة للمخزن' });
     }
   };
 
@@ -326,7 +360,7 @@ export default function DispatchClientView({
                       {stock.map((item) => (
                         <div
                           key={item.id}
-                          className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs"
+                          className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-2 text-xs"
                         >
                           <div>
                             <div className="font-bold text-slate-800">{item.product?.name || 'صنف'}</div>
@@ -334,17 +368,36 @@ export default function DispatchClientView({
                               تشغيلة: {item.batch?.batchNumber || '-'}
                             </div>
                           </div>
-                          <div className="text-left">
-                            <div className="font-bold font-mono text-emerald-700 text-sm">
-                              {item.quantity} كرتونة
+                          <div className="flex items-center gap-2">
+                            <div className="text-left">
+                              <div className="font-bold font-mono text-emerald-700 text-sm">
+                                {item.quantity} كرتونة
+                              </div>
+                              <div
+                                className={`text-[10px] font-bold ${
+                                  (item.hoursRemaining ?? 999) <= 16 ? 'text-rose-600' : 'text-slate-500'
+                                }`}
+                              >
+                                متبقي {item.hoursRemaining ?? '-'} س
+                              </div>
                             </div>
-                            <div
-                              className={`text-[10px] font-bold ${
-                                (item.hoursRemaining ?? 999) <= 16 ? 'text-rose-600' : 'text-slate-500'
-                              }`}
+                            <button
+                              type="button"
+                              disabled={loading}
+                              onClick={() =>
+                                handleReturnToWarehouse(
+                                  rep.id,
+                                  item.batchId,
+                                  item.quantity,
+                                  item.product?.name || 'الصنف'
+                                )
+                              }
+                              title="تفريغ / إرجاع الكمية للمخزن الرئيسي"
+                              className="px-2.5 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[11px] flex items-center gap-1 transition cursor-pointer shrink-0"
                             >
-                              متبقي {item.hoursRemaining ?? '-'} س
-                            </div>
+                              <RotateCcw className="w-3 h-3" />
+                              <span>إرجاع للمخزن</span>
+                            </button>
                           </div>
                         </div>
                       ))}

@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { wipeDatabaseAction } from '@/lib/actions';
+import { wipeDatabaseAction, restoreBackupAction, getDatabaseStatsAction } from '@/lib/actions';
 import { useBranding } from '@/components/common/BrandingProvider';
 import {
   Settings,
   Database,
   Download,
+  Upload,
   AlertTriangle,
   ShieldAlert,
   ShieldCheck,
@@ -122,6 +123,51 @@ export default function AdminSettingsClientView({ initialStats, adminName }: Pro
   const [stats, setStats] = useState<DatabaseStats>(initialStats);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreMsg, setRestoreMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(
+    null
+  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleRestoreFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!confirm(`هل أنت متأكد من استرجاع النسخة الاحتياطية من الملف "${file.name}"؟`)) {
+      e.target.value = '';
+      return;
+    }
+
+    setIsRestoring(true);
+    setRestoreMsg(null);
+    try {
+      const text = await file.text();
+      const res = await restoreBackupAction(text);
+      if (res.success) {
+        setRestoreMsg({
+          type: 'success',
+          text: res.message || 'تم استرجاع النسخة الاحتياطية بنجاح!',
+        });
+        const statsRes = await getDatabaseStatsAction();
+        if (statsRes.success && statsRes.stats) {
+          setStats(statsRes.stats);
+        }
+        router.refresh();
+      } else {
+        setRestoreMsg({
+          type: 'error',
+          text: res.error || 'فشل استرجاع النسخة الاحتياطية',
+        });
+      }
+    } catch (err: any) {
+      setRestoreMsg({
+        type: 'error',
+        text: err.message || 'حدث خطأ أثناء قراءة ملف النسخة الاحتياطية',
+      });
+    } finally {
+      setIsRestoring(false);
+      e.target.value = '';
+    }
+  };
 
   // Wipe Modal State
   const [showWipeModal, setShowWipeModal] = useState(false);
@@ -469,24 +515,65 @@ export default function AdminSettingsClientView({ initialStats, adminName }: Pro
             </div>
           </div>
 
-          <button
-            onClick={handleDownloadBackup}
-            disabled={isDownloading}
-            className="w-full sm:w-auto px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-black shadow-md shadow-blue-600/20 transition flex items-center justify-center gap-2 active:scale-95 shrink-0"
-          >
-            {isDownloading ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>جاري تجميع وحفظ البيانات...</span>
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4" />
-                <span>تحميل النسخة الاحتياطية الآن</span>
-              </>
-            )}
-          </button>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              onChange={handleRestoreFileChange}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isRestoring}
+              className="w-full sm:w-auto px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+            >
+              {isRestoring ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>جاري الاسترجاع...</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  <span>استرجاع نسخة احتياطية (JSON)</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleDownloadBackup}
+              disabled={isDownloading}
+              className="w-full sm:w-auto px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-black shadow-md shadow-blue-600/20 transition flex items-center justify-center gap-2 active:scale-95 shrink-0 cursor-pointer"
+            >
+              {isDownloading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>جاري تجميع وحفظ البيانات...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>تحميل النسخة الاحتياطية الآن</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
+
+        {restoreMsg && (
+          <div
+            className={`m-6 p-4 rounded-2xl flex items-center gap-3 text-xs font-bold ${
+              restoreMsg.type === 'success'
+                ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                : 'bg-rose-50 border border-rose-200 text-rose-800'
+            }`}
+          >
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <span>{restoreMsg.text}</span>
+          </div>
+        )}
 
         {downloadSuccess && (
           <div className="m-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-xs font-bold text-emerald-800 animate-fadeIn">

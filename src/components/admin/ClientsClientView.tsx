@@ -3,7 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Client } from '@/types';
-import { createClientAction, updateClientAction, deleteClientAction } from '@/lib/actions';
+import {
+  createClientAction,
+  updateClientAction,
+  deleteClientAction,
+  adminRecordCollectionAction,
+} from '@/lib/actions';
 import {
   Building2,
   Plus,
@@ -17,6 +22,7 @@ import {
   X,
   CreditCard,
   Store,
+  HandCoins,
 } from 'lucide-react';
 
 interface Props {
@@ -95,6 +101,37 @@ export default function ClientsClientView({ clients }: Props) {
       router.refresh();
     } else {
       setMsg({ type: 'error', text: res.error || 'فشل الحذف' });
+    }
+  };
+
+  const handleQuickCollect = async (client: Client) => {
+    const input = window.prompt(
+      `تحصيل نقدية من "${client.name}" (المديونية الحالية: ${client.creditBalance.toLocaleString('ar-EG')} ج.م)\nأدخل المبلغ المحصل نقداً (ج.م):`,
+      client.creditBalance > 0 ? String(client.creditBalance) : ''
+    );
+    if (!input) return;
+    const amount = parseFloat(input);
+    if (isNaN(amount) || amount <= 0) {
+      setMsg({ type: 'error', text: 'يرجى إدخال مبلغ تحصيل صحيح أكبر من الصفر' });
+      return;
+    }
+
+    setLoading(true);
+    setMsg(null);
+    const fd = new FormData();
+    fd.set('clientId', client.id);
+    fd.set('amount', String(amount));
+    fd.set('notes', `تحصيل مباشر من صفحة العملاء`);
+
+    const res = await adminRecordCollectionAction(fd);
+    setLoading(false);
+
+    if (res.success) {
+      setMsg({ type: 'success', text: res.message || 'تم تسجيل التحصيل بنجاح' });
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('app:sync'));
+      router.refresh();
+    } else {
+      setMsg({ type: 'error', text: res.error || 'فشل تسجيل التحصيل' });
     }
   };
 
@@ -207,26 +244,43 @@ export default function ClientsClientView({ clients }: Props) {
                 </div>
               </div>
 
-              <div className="pt-3 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditClient(client)}
-                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1"
-                  title="تعديل"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                  <span>تعديل</span>
-                </button>
+              <div className="pt-3 flex items-center justify-between gap-2">
+                {client.creditBalance > 0 ? (
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => handleQuickCollect(client)}
+                    className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                    title="تحصيل نقدية من العميل للخزينة"
+                  >
+                    <HandCoins className="w-3.5 h-3.5" />
+                    <span>تحصيل مديونية</span>
+                  </button>
+                ) : (
+                  <span className="text-[11px] font-bold text-emerald-600">لا توجد مديونية</span>
+                )}
 
-                <button
-                  type="button"
-                  onClick={() => handleDelete(client)}
-                  className="p-2 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-bold transition flex items-center gap-1"
-                  title="حذف"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>حذف</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditClient(client)}
+                    className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1"
+                    title="تعديل"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    <span>تعديل</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(client)}
+                    className="p-2 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-bold transition flex items-center gap-1"
+                    title="حذف"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>حذف</span>
+                  </button>
+                </div>
               </div>
             </div>
           ))}

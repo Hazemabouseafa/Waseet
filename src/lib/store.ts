@@ -465,8 +465,8 @@ class DatabaseStore {
     await this.ensureLoaded();
     const users = this.data.users || [];
     users.forEach((u) => {
-      if (u.role === 'admin' || u.username === 'admin') {
-        u.name = 'محمد عبدالله (المدير العام)';
+      if ((u.role === 'admin' || u.username === 'admin') && !u.name) {
+        u.name = 'المدير العام (مسؤول النظام)';
       }
     });
     return users;
@@ -483,8 +483,8 @@ class DatabaseStore {
           u.id.toLowerCase() === targetLower ||
           u.username.toLowerCase() === targetLower
       ) || null;
-    if (user && (user.role === 'admin' || user.username === 'admin')) {
-      user.name = 'محمد عبدالله (المدير العام)';
+    if (user && (user.role === 'admin' || user.username === 'admin') && !user.name) {
+      user.name = 'المدير العام (مسؤول النظام)';
     }
     return user;
   }
@@ -493,8 +493,8 @@ class DatabaseStore {
     await this.ensureLoaded();
     const target = username.toLowerCase().trim();
     const user = this.data.users.find((u) => u.username.toLowerCase() === target) || null;
-    if (user && (user.role === 'admin' || user.username === 'admin')) {
-      user.name = 'محمد عبدالله (المدير العام)';
+    if (user && (user.role === 'admin' || user.username === 'admin') && !user.name) {
+      user.name = 'المدير العام (مسؤول النظام)';
     }
     return user;
   }
@@ -602,6 +602,34 @@ class DatabaseStore {
     });
   }
 
+  async updateProduct(
+    id: string,
+    updates: Partial<Omit<Product, 'id' | 'createdAt'>>
+  ): Promise<Product> {
+    return this.transaction((db) => {
+      if (!db.products) db.products = [];
+      const idx = db.products.findIndex((p) => p.id === id);
+      if (idx === -1) throw new Error('المنتج المحدد غير موجود');
+
+      const current = db.products[idx];
+      const updated: Product = {
+        ...current,
+        name: updates.name !== undefined ? updates.name.trim() || current.name : current.name,
+        category: updates.category !== undefined ? updates.category.trim() || current.category : current.category,
+        price: updates.price !== undefined && !isNaN(Number(updates.price)) ? Math.max(0, Number(updates.price)) : current.price,
+        cost: updates.cost !== undefined && !isNaN(Number(updates.cost)) ? Math.max(0, Number(updates.cost)) : current.cost,
+        unit: updates.unit !== undefined ? updates.unit.trim() || current.unit : current.unit,
+        shelfLifeDays:
+          updates.shelfLifeDays !== undefined && !isNaN(Number(updates.shelfLifeDays))
+            ? Math.max(1, Number(updates.shelfLifeDays))
+            : current.shelfLifeDays,
+      };
+
+      db.products[idx] = updated;
+      return updated;
+    });
+  }
+
   async getBatches(): Promise<(InventoryBatch & { product: Product; hoursRemaining: number })[]> {
     await this.ensureLoaded();
     const now = new Date().getTime();
@@ -686,6 +714,7 @@ class DatabaseStore {
     productionDate: string;
     purchaseId?: string;
     purchaseItemId?: string;
+    unitCost?: number;
   }): Promise<InventoryBatch> {
     return this.transaction((db) => {
       if (!db.batches) db.batches = [];
@@ -698,51 +727,96 @@ class DatabaseStore {
         throw new Error('يرجى إدخال كمية صحيحة للتشغيلة أكبر من الصفر');
       }
 
-      // Mandatory Supplier Invoice Linkage Rule
-      if (!data.purchaseId || !data.purchaseItemId) {
-        throw new Error('يرجى تحديد فاتورة الشراء التابعة للمورد أولاً (الربط الإلزامي بفواتير الموردين)');
+      // Case 1: Linked to a Supplier Purchase Invoice
+      if (data.purchaseId && data.purchaseItemId) {
+        const purchase = db.supplierPurchases.find((p) => p.id === data.purchaseId);
+        if (!purchase) {
+          throw new Error('فاتورة الشراء المحددة للمورد غير موجودة بالنظام');
+        }
+
+        const purchaseItem =
+          (purchase.items || []).find((i) => i.id === data.purchaseItemId) ||
+          db.supplierPurchaseItems.find((i) => i.id === data.purchaseItemId);
+        if (!purchaseItem) {
+          throw new Error('الصنف المحدد غير مدرج في فاتورة الشراء المختارة للمورد');
+        }
+
+        const targetProdId = String(purchaseItem.productId || data.productId).trim();
+        const prod = db.products.find(
+          (p) =>
+            p.id === targetProdId ||
+            p.id.toLowerCase() === targetProdId.toLowerCase() ||
+            p.name === targetProdId
+        );
+        if (!prod) throw new Error('المنتج المحدد غير موجود، يرجى إعادة المحاولة');
+
+        // Quantity Validation Check (منع تجاوز الكمية الواردة)
+        const assignedQty = db.batches
+          .filter(
+            (b) =>
+              b.purchaseItemId === purchaseItem.id ||
+              (b.purchaseId === purchase.id && b.productId === prod.id)
+          )
+          .reduce((sum, b) => sum + (Number(b.initialQuantity) || Number(b.quantity) || 0), 0);
+
+        const remainingQty = Math.max(0, purchaseItem.quantity - assignedQty);
+
+        if (qty > remainingQty) {
+          throw new Error(
+            `عذراً، الكمية المراد إدخالها للتشغيلة (${qty}) أكبر من الكمية الواردة والمتبقية في فاتورة المورد المحددة (المتبقي: ${remainingQty})`
+          );
+        }
+
+        const shelfDays = prod.shelfLifeDays || 1;
+        const prodDate =
+          data.productionDate || purchaseItem.productionDate || new Date().toISOString();
+        const expiryDate = calculateExpiry(prodDate, shelfDays);
+        const status = determineBatchStatus(expiryDate, qty);
+
+        const unitCost = purchaseItem.unitCost || prod.cost || 0;
+        if (unitCost > 0) {
+          prod.cost = unitCost;
+        }
+
+        const newBatch: InventoryBatch = {
+          id: `bat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          productId: prod.id,
+          batchNumber: data.batchNumber || `BAT-${Date.now().toString().slice(-6)}`,
+          initialQuantity: qty,
+          quantity: qty,
+          productionDate: prodDate,
+          expiryDate,
+          status,
+          supplierId: purchase.supplierId,
+          purchaseId: purchase.id,
+          purchaseItemId: purchaseItem.id,
+          unitCost,
+          createdAt: new Date().toISOString(),
+        };
+
+        db.batches.push(newBatch);
+        return newBatch;
       }
 
-      const purchase = db.supplierPurchases.find((p) => p.id === data.purchaseId);
-      if (!purchase) {
-        throw new Error('فاتورة الشراء المحددة للمورد غير موجودة بالنظام');
-      }
-
-      const purchaseItem = (purchase.items || []).find((i) => i.id === data.purchaseItemId) ||
-        db.supplierPurchaseItems.find((i) => i.id === data.purchaseItemId);
-      if (!purchaseItem) {
-        throw new Error('الصنف المحدد غير مدرج في فاتورة الشراء المختارة للمورد');
-      }
-
-      const targetProdId = String(purchaseItem.productId || data.productId).trim();
+      // Case 2: Direct Warehouse Opening Stock / Direct Batch Entry (رصيد أول المدة / إضافة مباشرة للمخزن)
+      const targetProdId = String(data.productId || '').trim();
       const prod = db.products.find(
         (p) =>
           p.id === targetProdId ||
           p.id.toLowerCase() === targetProdId.toLowerCase() ||
           p.name === targetProdId
       );
-      if (!prod) throw new Error('المنتج المحدد غير موجود، يرجى إعادة المحاولة');
-
-      // Quantity Validation Check (منع تجاوز الكمية الواردة)
-      const assignedQty = db.batches
-        .filter((b) => b.purchaseItemId === purchaseItem.id || (b.purchaseId === purchase.id && b.productId === prod.id))
-        .reduce((sum, b) => sum + (Number(b.initialQuantity) || Number(b.quantity) || 0), 0);
-
-      const remainingQty = Math.max(0, purchaseItem.quantity - assignedQty);
-
-      if (qty > remainingQty) {
-        throw new Error(
-          `عذراً، الكمية المراد إدخالها للتشغيلة (${qty}) أكبر من الكمية الواردة والمتبقية في فاتورة المورد المحددة (المتبقي: ${remainingQty})`
-        );
-      }
+      if (!prod) throw new Error('المنتج المحدد غير موجود بالمخزن');
 
       const shelfDays = prod.shelfLifeDays || 1;
-      const prodDate = data.productionDate || purchaseItem.productionDate || new Date().toISOString();
+      const prodDate = data.productionDate || new Date().toISOString();
       const expiryDate = calculateExpiry(prodDate, shelfDays);
       const status = determineBatchStatus(expiryDate, qty);
 
-      // Link unit cost from supplier purchase invoice
-      const unitCost = purchaseItem.unitCost || prod.cost || 0;
+      const unitCost =
+        data.unitCost !== undefined && !isNaN(Number(data.unitCost)) && Number(data.unitCost) > 0
+          ? Number(data.unitCost)
+          : prod.cost || 0;
       if (unitCost > 0) {
         prod.cost = unitCost;
       }
@@ -750,15 +824,12 @@ class DatabaseStore {
       const newBatch: InventoryBatch = {
         id: `bat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         productId: prod.id,
-        batchNumber: data.batchNumber || `BAT-${Date.now().toString().slice(-6)}`,
+        batchNumber: data.batchNumber || `BAT-DIR-${Date.now().toString().slice(-6)}`,
         initialQuantity: qty,
         quantity: qty,
         productionDate: prodDate,
         expiryDate,
         status,
-        supplierId: purchase.supplierId,
-        purchaseId: purchase.id,
-        purchaseItemId: purchaseItem.id,
         unitCost,
         createdAt: new Date().toISOString(),
       };
@@ -878,6 +949,52 @@ class DatabaseStore {
       return {
         success: true,
         message: `تم تحويل ${data.quantity} كرتونة إلى سيارة المندوب ${rep.name} بنجاح`,
+      };
+    });
+  }
+
+  // Atomic return of unsold stock from rep's van back to main warehouse batch
+  async returnStockFromRepToWarehouse(data: {
+    repId: string;
+    batchId: string;
+    quantity: number;
+  }): Promise<{ success: boolean; message: string }> {
+    return this.transaction((db) => {
+      const qty = Number(data.quantity);
+      if (isNaN(qty) || qty <= 0) {
+        throw new Error('يرجى إدخال كمية صحيحة للإرجاع أكبر من الصفر');
+      }
+
+      const rep = db.users.find((u) => u.id === data.repId);
+      if (!rep) throw new Error('المندوب المحدد غير موجود');
+
+      const repItem = (db.repInventory || []).find(
+        (r) => r.repId === data.repId && r.batchId === data.batchId
+      );
+      if (!repItem || repItem.quantity < qty) {
+        throw new Error(
+          `الكمية المتاحة في سيارة المندوب (${repItem?.quantity || 0}) أقل من الكمية المطلوبة للإرجاع للمخزن (${qty})`
+        );
+      }
+
+      const batch = (db.batches || []).find((b) => b.id === data.batchId);
+      if (!batch) {
+        throw new Error('التشغيلة الأصلية غير موجودة بالمستودع الرئيسي');
+      }
+
+      // Deduct from rep's van
+      repItem.quantity -= qty;
+      repItem.updatedAt = new Date().toISOString();
+
+      // Add back to main warehouse batch
+      batch.quantity += qty;
+      batch.status = determineBatchStatus(batch.expiryDate, batch.quantity);
+
+      const prod = (db.products || []).find((p) => p.id === batch.productId);
+
+      return {
+        success: true,
+        message: `تم إرجاع ${qty} ${prod?.unit || 'كرتونة'} من "${prod?.name || 'الصنف'}" من سيارة ${rep.name} إلى المستودع الرئيسي بنجاح`,
       };
     });
   }
@@ -1110,6 +1227,109 @@ class DatabaseStore {
     });
   }
 
+  // Direct Wholesale / Warehouse Invoice issued by Admin directly from Central Warehouse FIFO batches
+  async createDirectWarehouseInvoice(data: {
+    adminId?: string;
+    clientId: string;
+    paymentType: 'cash' | 'credit';
+    paidAmount?: number;
+    discount?: number;
+    notes?: string;
+    items: {
+      productId: string;
+      quantity: number;
+    }[];
+  }): Promise<Invoice> {
+    return this.transaction((db) => {
+      const adminUser =
+        db.users.find((u) => u.id === data.adminId) ||
+        db.users.find((u) => u.role === 'admin') ||
+        db.users[0];
+      if (!adminUser) throw new Error('حساب الإدارة غير موجود');
+
+      const client = db.clients.find((c) => c.id === data.clientId);
+      if (!client) throw new Error('العميل أو المنفذ المحدد غير موجود');
+
+      if (!data.items || data.items.length === 0) {
+        throw new Error('يرجى إضافة صنف واحد على الأقل في فاتورة البيع المباشر من المخزن');
+      }
+
+      const invoiceId = `inv_wh_${Date.now()}`;
+      const invoiceNumber = `WH-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      let subtotal = 0;
+      const invoiceItems: InvoiceItem[] = [];
+
+      for (const reqItem of data.items) {
+        const product = db.products.find((p) => p.id === reqItem.productId);
+        if (!product) throw new Error(`المنتج ${reqItem.productId} غير معرف`);
+
+        let neededQty = Number(reqItem.quantity);
+        if (isNaN(neededQty) || neededQty <= 0) continue;
+
+        // Find available batches in Main Warehouse sorted by earliest expiry (FIFO)
+        const warehouseBatches = (db.batches || [])
+          .filter((b) => b.productId === reqItem.productId && b.quantity > 0)
+          .sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
+
+        const totalWarehouseStock = warehouseBatches.reduce((sum, b) => sum + b.quantity, 0);
+        if (totalWarehouseStock < neededQty) {
+          throw new Error(
+            `الكمية المتاحة في المخزن الرئيسي من "${product.name}" (${totalWarehouseStock}) لا تكفي للكمية المطلوبة (${neededQty})`
+          );
+        }
+
+        for (const batch of warehouseBatches) {
+          if (neededQty <= 0) break;
+          const deductQty = Math.min(batch.quantity, neededQty);
+          batch.quantity -= deductQty;
+          batch.status = determineBatchStatus(batch.expiryDate, batch.quantity);
+          neededQty -= deductQty;
+
+          const itemTotal = deductQty * product.price;
+          subtotal += itemTotal;
+
+          invoiceItems.push({
+            id: `item_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            invoiceId,
+            productId: product.id,
+            batchId: batch.id,
+            quantity: deductQty,
+            unitPrice: product.price,
+            totalPrice: itemTotal,
+          });
+        }
+      }
+
+      const discount = Math.max(0, Number(data.discount) || 0);
+      const totalAmount = Math.max(0, subtotal - discount);
+      const paid = data.paymentType === 'cash' ? totalAmount : Math.max(0, Number(data.paidAmount) || 0);
+      const remainingUnpaid = Math.max(0, totalAmount - paid);
+
+      if (remainingUnpaid > 0) {
+        client.creditBalance += remainingUnpaid;
+      }
+
+      const invoice: Invoice = {
+        id: invoiceId,
+        invoiceNumber,
+        repId: adminUser.id,
+        clientId: data.clientId,
+        subtotal,
+        discount,
+        totalAmount,
+        paidAmount: paid,
+        paymentType: data.paymentType,
+        notes: data.notes ? `[بيع مباشر من المخزن الرئيسي] ${data.notes}` : '[بيع مباشر من المخزن الرئيسي]',
+        createdAt: new Date().toISOString(),
+        items: invoiceItems,
+      };
+
+      db.invoices.unshift(invoice);
+      return invoice;
+    });
+  }
+
   async deleteInvoice(id: string): Promise<boolean> {
     return this.transaction((db) => {
       if (!db.invoices) db.invoices = [];
@@ -1117,6 +1337,7 @@ class DatabaseStore {
       if (idx === -1) throw new Error('الفاتورة المراد حذفها غير موجودة');
       const invoice = db.invoices[idx];
 
+      // 1. Restore client credit balance if unpaid amount existed
       if (invoice.paymentType === 'credit') {
         const remaining = (invoice.totalAmount || 0) - (invoice.paidAmount || 0);
         if (remaining > 0 && db.clients) {
@@ -1125,6 +1346,42 @@ class DatabaseStore {
             client.creditBalance = Math.max(0, client.creditBalance - remaining);
           }
         }
+      }
+
+      // 2. Restore stock quantities back to Van or Main Warehouse
+      const isDirectWarehouse =
+        invoice.invoiceNumber?.startsWith('WH-') ||
+        invoice.notes?.includes('بيع مباشر من المخزن');
+      const repUser = (db.users || []).find((u) => u.id === invoice.repId);
+
+      for (const item of invoice.items || []) {
+        if (!item.batchId || item.quantity <= 0) continue;
+        if (isDirectWarehouse || repUser?.role === 'admin') {
+          const batch = (db.batches || []).find((b) => b.id === item.batchId);
+          if (batch) {
+            batch.quantity += item.quantity;
+            batch.status = determineBatchStatus(batch.expiryDate, batch.quantity);
+          }
+        } else {
+          let repItem = (db.repInventory || []).find(
+            (r) => r.repId === invoice.repId && r.batchId === item.batchId
+          );
+          if (repItem) {
+            repItem.quantity += item.quantity;
+            repItem.updatedAt = new Date().toISOString();
+          } else {
+            const batch = (db.batches || []).find((b) => b.id === item.batchId);
+            if (batch) {
+              batch.quantity += item.quantity;
+              batch.status = determineBatchStatus(batch.expiryDate, batch.quantity);
+            }
+          }
+        }
+      }
+
+      // 3. Remove any returns linked directly to this invoice
+      if (db.returns) {
+        db.returns = db.returns.filter((r) => r.invoiceId !== invoice.id);
       }
 
       db.invoices.splice(idx, 1);
@@ -2653,6 +2910,58 @@ class DatabaseStore {
           message: 'تم تصفير ومسح كافة الحركات التشغيلية والمالية والمخزنية بنجاح، مع بقاء بيانات الأصناف والعملاء والموردين والموظفين.',
         };
       }
+    });
+  }
+
+  async restoreBackup(backupPayload: any): Promise<{ success: boolean; message: string }> {
+    return this.transaction((db) => {
+      const incoming = backupPayload?.database || backupPayload;
+      if (!incoming || typeof incoming !== 'object') {
+        throw new Error('ملف النسخة الاحتياطية غير صالح أو تالف');
+      }
+
+      const existingUsers = db.users || [];
+      const existingAdmin =
+        existingUsers.find((u) => u.role === 'admin') || getInitialData().users[0];
+
+      if (Array.isArray(incoming.users) && incoming.users.length > 0) {
+        db.users = incoming.users.map((u: any) => {
+          const prev = existingUsers.find((eu) => eu.id === u.id || eu.username === u.username);
+          const password =
+            !u.password || u.password === '***' ? prev?.password || '123' : u.password;
+          return {
+            ...u,
+            password,
+          };
+        });
+        if (!db.users.some((u) => u.role === 'admin')) {
+          db.users.unshift(existingAdmin);
+        }
+      }
+
+      if (Array.isArray(incoming.categories)) db.categories = incoming.categories;
+      if (Array.isArray(incoming.products)) db.products = incoming.products;
+      if (Array.isArray(incoming.batches)) db.batches = incoming.batches;
+      if (Array.isArray(incoming.repInventory)) db.repInventory = incoming.repInventory;
+      if (Array.isArray(incoming.clients)) db.clients = incoming.clients;
+      if (Array.isArray(incoming.invoices)) db.invoices = incoming.invoices;
+      if (Array.isArray(incoming.returns)) db.returns = incoming.returns;
+      if (Array.isArray(incoming.collections)) db.collections = incoming.collections;
+      if (Array.isArray(incoming.settlements)) db.settlements = incoming.settlements;
+      if (Array.isArray(incoming.advances)) db.advances = incoming.advances;
+      if (Array.isArray(incoming.suppliers)) db.suppliers = incoming.suppliers;
+      if (Array.isArray(incoming.supplierPurchases)) db.supplierPurchases = incoming.supplierPurchases;
+      if (Array.isArray(incoming.supplierPurchaseItems))
+        db.supplierPurchaseItems = incoming.supplierPurchaseItems;
+      if (Array.isArray(incoming.supplierPayments)) db.supplierPayments = incoming.supplierPayments;
+      if (Array.isArray(incoming.employees)) db.employees = incoming.employees;
+      if (Array.isArray(incoming.payrollPayments)) db.payrollPayments = incoming.payrollPayments;
+      if (Array.isArray(incoming.repTargets)) db.repTargets = incoming.repTargets;
+
+      return {
+        success: true,
+        message: 'تم استرجاع النسخة الاحتياطية وتحديث كافة بيانات المخازن والحسابات بنجاح!',
+      };
     });
   }
 }

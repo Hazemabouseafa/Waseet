@@ -169,13 +169,15 @@ export async function createBatchAction(formData: FormData) {
     const batchNumber = ((formData.get('batchNumber') as string) || '').trim();
     const quantity = parseInt(formData.get('quantity') as string, 10);
     const productionDate = (formData.get('productionDate') as string) || new Date().toISOString();
-    const purchaseId = ((formData.get('purchaseId') as string) || '').trim();
-    const purchaseItemId = ((formData.get('purchaseItemId') as string) || '').trim();
+    const purchaseId = ((formData.get('purchaseId') as string) || '').trim() || undefined;
+    const purchaseItemId = ((formData.get('purchaseItemId') as string) || '').trim() || undefined;
+    const unitCostRaw = formData.get('unitCost') as string;
+    const unitCost = unitCostRaw !== null && unitCostRaw !== '' ? parseFloat(unitCostRaw) : undefined;
 
-    if (!purchaseId || !purchaseItemId) {
+    if (!purchaseId && !productId) {
       return {
         success: false,
-        error: 'يرجى تحديد فاتورة الشراء والتوريد التابعة للمورد أولاً (الربط الإلزامي بفواتير الموردين)',
+        error: 'يرجى اختيار الصنف المراد إضافة التشغيلة له أو تحديد فاتورة المورد',
       };
     }
 
@@ -190,15 +192,67 @@ export async function createBatchAction(formData: FormData) {
       productionDate,
       purchaseId,
       purchaseItemId,
+      unitCost,
     });
 
     revalidatePath('/admin/inventory');
+    revalidatePath('/admin/dispatch');
     revalidatePath('/admin/suppliers');
     revalidatePath('/admin/profit-loss');
     revalidatePath('/admin');
-    return { success: true, message: `تم تسجيل التشغيلة (${newBatch.batchNumber}) بنجاح وربطها بفاتورة المورد`, batch: newBatch };
+    return {
+      success: true,
+      message: purchaseId
+        ? `تم تسجيل التشغيلة (${newBatch.batchNumber}) بنجاح وربطها بفاتورة المورد`
+        : `تم إضافة التشغيلة المباشرة (${newBatch.batchNumber}) للمخزن الرئيسي بنجاح`,
+      batch: newBatch,
+    };
   } catch (err: any) {
     return { success: false, error: err.message || 'حدث خطأ أثناء تسجيل التشغيلة' };
+  }
+}
+
+export async function updateProductAction(productId: string, formData: FormData) {
+  try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      return { success: false, error: 'غير مصرح لك بتعديل بيانات الأصناف' };
+    }
+
+    const name = ((formData.get('name') as string) || '').trim();
+    const category = ((formData.get('category') as string) || '').trim();
+    const price = parseFloat(formData.get('price') as string);
+    const cost = parseFloat(formData.get('cost') as string);
+    const unit = ((formData.get('unit') as string) || '').trim();
+    const shelfLifeDays = parseInt(formData.get('shelfLifeDays') as string, 10);
+
+    if (!name) {
+      return { success: false, error: 'يرجى إدخال اسم الصنف' };
+    }
+    if (isNaN(price) || price < 0 || isNaN(cost) || cost < 0) {
+      return { success: false, error: 'يرجى التأكد من صحة سعر البيع وسعر التكلفة' };
+    }
+
+    const updated = await dbStore.updateProduct(productId, {
+      name,
+      category: category || undefined,
+      price,
+      cost,
+      unit: unit || undefined,
+      shelfLifeDays: !isNaN(shelfLifeDays) && shelfLifeDays > 0 ? shelfLifeDays : undefined,
+    });
+
+    revalidatePath('/admin/inventory');
+    revalidatePath('/admin/dispatch');
+    revalidatePath('/admin/profit-loss');
+    revalidatePath('/admin');
+    return {
+      success: true,
+      message: `تم تحديث بيانات وأسعار الصنف "${updated.name}" بنجاح`,
+      product: updated,
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'فشل تحديث بيانات الصنف' };
   }
 }
 
@@ -1232,5 +1286,157 @@ export async function getDatabaseStatsAction() {
     return { success: false, error: err.message || 'فشل جلب إحصائيات النظام' };
   }
 }
+
+export async function returnStockFromRepAction(
+  repId: string,
+  batchId: string,
+  quantity: number
+) {
+  try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      return { success: false, error: 'غير مصرح لك بإرجاع العهدة للمخزن' };
+    }
+
+    const res = await dbStore.returnStockFromRepToWarehouse({
+      repId,
+      batchId,
+      quantity: Number(quantity),
+    });
+
+    revalidatePath('/admin/dispatch');
+    revalidatePath('/admin/inventory');
+    revalidatePath('/admin/reps');
+    revalidatePath('/admin/settlements');
+    revalidatePath('/admin');
+
+    return { success: true, message: res.message, error: undefined };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'فشل إرجاع البضاعة من السيارة للمخزن', message: undefined };
+  }
+}
+
+export async function createDirectWarehouseInvoiceAction(data: {
+  clientId: string;
+  paymentType: 'cash' | 'credit';
+  paidAmount?: number;
+  discount?: number;
+  notes?: string;
+  items: { productId: string; quantity: number }[];
+}) {
+  try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      return { success: false, error: 'غير مصرح لك بإصدار فاتورة بيع مباشر من المخزن' };
+    }
+
+    const invoice = await dbStore.createDirectWarehouseInvoice({
+      adminId: user.id,
+      ...data,
+    });
+
+    revalidatePath('/admin');
+    revalidatePath('/admin/invoices');
+    revalidatePath('/admin/inventory');
+    revalidatePath('/admin/clients');
+    revalidatePath('/admin/profit-loss');
+
+    return {
+      success: true,
+      message: `تم إصدار فاتورة البيع المباشر (${invoice.invoiceNumber}) من المخزن الرئيسي بنجاح!`,
+      invoice,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || 'حدث خطأ أثناء إصدار فاتورة البيع المباشر من المخزن',
+    };
+  }
+}
+
+export async function adminRecordCollectionAction(formData: FormData) {
+  try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      return { success: false, error: 'غير مصرح لك بتسجيل التحصيل' };
+    }
+
+    const clientId = ((formData.get('clientId') as string) || '').trim();
+    const amount = parseFloat(formData.get('amount') as string);
+    const notes = ((formData.get('notes') as string) || '').trim();
+
+    if (!clientId) {
+      return { success: false, error: 'يرجى تحديد العميل المراد التحصيل منه' };
+    }
+    if (isNaN(amount) || amount <= 0) {
+      return { success: false, error: 'يرجى إدخال مبلغ تحصيل صحيح أكبر من الصفر' };
+    }
+
+    const col = await dbStore.createCollection({
+      repId: user.id,
+      clientId,
+      amount,
+      notes: notes ? `[تحصيل مباشر للإدارة] ${notes}` : '[تحصيل مباشر للإدارة]',
+    });
+
+    revalidatePath('/admin');
+    revalidatePath('/admin/clients');
+    revalidatePath('/admin/invoices');
+    revalidatePath('/admin/profit-loss');
+
+    return {
+      success: true,
+      message: `تم تحصيل مبلغ ${amount.toLocaleString('ar-EG')} ج.م وإيداعه في الخزينة بنجاح!`,
+      collection: col,
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'فشل تسجيل عملية التحصيل' };
+  }
+}
+
+export async function restoreBackupAction(jsonString: string) {
+  try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      return { success: false, error: 'غير مصرح لك باسترجاع النسخة الاحتياطية' };
+    }
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonString);
+    } catch {
+      return { success: false, error: 'صيغة ملف النسخة الاحتياطية (JSON) غير صالحة' };
+    }
+
+    const res = await dbStore.restoreBackup(parsed);
+
+    const paths = [
+      '/',
+      '/admin',
+      '/admin/invoices',
+      '/admin/inventory',
+      '/admin/dispatch',
+      '/admin/suppliers',
+      '/admin/profit-loss',
+      '/admin/clients',
+      '/admin/reps',
+      '/admin/settlements',
+      '/admin/advances',
+      '/admin/employees',
+      '/admin/analytics',
+      '/admin/settings',
+    ];
+    paths.forEach((p) => {
+      try {
+        revalidatePath(p);
+      } catch {}
+    });
+
+    return { success: true, message: res.message, error: undefined };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'فشل استرجاع النسخة الاحتياطية', message: undefined };
+  }
+}
+
 
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { logoutAction, updateAdminPasswordAction } from '@/lib/actions';
@@ -23,12 +23,15 @@ import {
   CheckCircle2,
   AlertCircle,
   HandCoins,
-  ChevronRight,
-  ChevronLeft,
   Building2,
   Wallet,
   TrendingUp,
   Settings,
+  Menu,
+  Search,
+  PlusCircle,
+  Sparkles,
+  ChevronLeft,
 } from 'lucide-react';
 
 interface AdminNavProps {
@@ -39,7 +42,10 @@ export default function AdminNav({ userName }: AdminNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { branding } = useBranding();
-  const navContainerRef = useRef<HTMLDivElement>(null);
+
+  // Mobile right drawer state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [navSearch, setNavSearch] = useState('');
 
   // Password Modal State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -50,35 +56,120 @@ export default function AdminNav({ userName }: AdminNavProps) {
   const [passError, setPassError] = useState<string | null>(null);
   const [passSuccess, setPassSuccess] = useState<string | null>(null);
 
-  const navItems = [
-    { href: '/admin', label: 'الرقابة الحية والمؤشرات', icon: LayoutDashboard },
-    { href: '/admin/profit-loss', label: 'الأرباح والخسائر (P&L)', icon: TrendingUp },
-    { href: '/admin/suppliers', label: 'الموردين وفواتير الشراء', icon: Building2 },
-    { href: '/admin/inventory', label: 'المخزن الرئيسي (FIFO)', icon: Boxes },
-    { href: '/admin/dispatch', label: 'تحويل عهدة للسيارات', icon: Truck },
-    { href: '/admin/invoices', label: 'فواتير المناديب والخصومات', icon: FileText },
-    { href: '/admin/clients', label: 'المنافذ والسوبرماركتات', icon: Store },
-    { href: '/admin/settlements', label: 'تسويات نهاية اليوم', icon: Scale },
-    { href: '/admin/employees', label: 'الموظفين والمرتبات', icon: Wallet },
-    { href: '/admin/advances', label: 'سلف المناديب', icon: HandCoins },
-    { href: '/admin/reps', label: 'إدارة المناديب', icon: Users },
-    { href: '/admin/analytics', label: 'التحليلات والمبيعات', icon: BarChart3 },
-    { href: '/admin/settings', label: 'إعدادات النظام والنسخ الاحتياطي', icon: Settings },
+  const navSections = [
+    {
+      title: 'الرئيسية والملخص المباشر',
+      items: [
+        {
+          href: '/admin',
+          label: 'مركز التحكم والعمليات',
+          subtitle: 'بيع مباشر • مؤشرات • تنبيهات',
+          icon: LayoutDashboard,
+          badge: 'الرئيسية',
+        },
+        {
+          href: '/admin/analytics',
+          label: 'تقارير المبيعات والتحليلات',
+          subtitle: 'الأعلى مبيعاً وأداء الخطوط',
+          icon: BarChart3,
+        },
+      ],
+    },
+    {
+      title: 'إدارة المخازن والسيارات',
+      items: [
+        {
+          href: '/admin/inventory',
+          label: 'المخزن الرئيسي والأصناف',
+          subtitle: 'إضافة أصناف • تشغيلات • أسعار',
+          icon: Boxes,
+        },
+        {
+          href: '/admin/dispatch',
+          label: 'تحميل وتفريغ السيارات',
+          subtitle: 'صرف عهدة للمندوب أو إرجاع للمخزن',
+          icon: Truck,
+        },
+        {
+          href: '/admin/settlements',
+          label: 'جرد وتسوية نهاية اليوم',
+          subtitle: 'مطابقة النقدية وعهدة السيارات',
+          icon: Scale,
+        },
+      ],
+    },
+    {
+      title: 'المبيعات والعملاء والموردين',
+      items: [
+        {
+          href: '/admin/invoices',
+          label: 'فواتير المبيعات والخصومات',
+          subtitle: 'فواتير المناديب والمخزن المباشر',
+          icon: FileText,
+        },
+        {
+          href: '/admin/clients',
+          label: 'العملاء وتحصيل المديونيات',
+          subtitle: 'كشف حساب • تحصيل نقدي فوري',
+          icon: Store,
+        },
+        {
+          href: '/admin/suppliers',
+          label: 'الموردين وفواتير الشراء',
+          subtitle: 'توريد بضاعة وسداد مستحقات',
+          icon: Building2,
+        },
+      ],
+    },
+    {
+      title: 'المناديب والخزينة والحسابات',
+      items: [
+        {
+          href: '/admin/profit-loss',
+          label: 'الأرباح والخسائر والخزينة',
+          subtitle: 'صافي الربح ورصيد الخزنة الفعلي',
+          icon: TrendingUp,
+        },
+        {
+          href: '/admin/reps',
+          label: 'إدارة المناديب والتارجت',
+          subtitle: 'حسابات المناديب والتارجت الشهري',
+          icon: Users,
+        },
+        {
+          href: '/admin/advances',
+          label: 'سلف وعهد المناديب',
+          subtitle: 'اعتماد وصرف السلف المالية',
+          icon: HandCoins,
+        },
+        {
+          href: '/admin/employees',
+          label: 'شؤون الموظفين والرواتب',
+          subtitle: 'المرتبات الشهرية والمصروفات الإدارية',
+          icon: Wallet,
+        },
+      ],
+    },
+    {
+      title: 'النظام والـ White-Label',
+      items: [
+        {
+          href: '/admin/settings',
+          label: 'الهوية التجارية والنسخ الاحتياطي',
+          subtitle: 'تغيير اسم الشركة والمدير والألوان',
+          icon: Settings,
+        },
+      ],
+    },
   ];
+
+  const allItems = navSections.flatMap((s) => s.items);
+  const currentItem = allItems.find((item) => item.href === pathname) || allItems[0];
 
   const handleLogout = async () => {
     await logoutAction();
     router.push('/login');
     router.refresh();
-  };
-
-  const scrollNav = (direction: 'left' | 'right') => {
-    if (!navContainerRef.current) return;
-    const distance = 250;
-    navContainerRef.current.scrollBy({
-      left: direction === 'left' ? -distance : distance,
-      behavior: 'smooth',
-    });
   };
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -117,130 +208,253 @@ export default function AdminNav({ userName }: AdminNavProps) {
     }
   };
 
+  const renderSidebarContent = (isMobile = false) => (
+    <div className="flex flex-col h-full bg-slate-900 text-white select-none">
+      {/* Brand Header */}
+      <div className="p-4 border-b border-slate-800/80 flex items-center justify-between gap-3 bg-slate-950/40">
+        <Link
+          href="/admin"
+          onClick={() => isMobile && setMobileMenuOpen(false)}
+          className="flex items-center gap-3 min-w-0 group"
+        >
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-600/25 shrink-0 group-hover:scale-105 transition">
+            <Truck className="w-6 h-6" />
+          </div>
+          <div className="min-w-0">
+            <div className="font-black text-base text-white leading-tight truncate">
+              {branding.appName}
+            </div>
+            <div className="text-[11px] text-emerald-400 font-bold truncate mt-0.5">
+              {branding.companyName}
+            </div>
+          </div>
+        </Link>
+
+        {isMobile && (
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(false)}
+            className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Manager Profile Card inside Right Sidebar */}
+      <div className="px-4 py-3 bg-slate-800/40 border-b border-slate-800/80 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-black text-white truncate">
+              {branding.managerName || userName}
+            </div>
+            <div className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>المدير العام للنظام</span>
+            </div>
+          </div>
+        </div>
+        <Link
+          href="/admin/settings"
+          onClick={() => isMobile && setMobileMenuOpen(false)}
+          title="تعديل اسم المدير والهوية"
+          className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-emerald-600 text-[10px] font-bold text-slate-300 hover:text-white transition shrink-0"
+        >
+          تخصيص
+        </Link>
+      </div>
+
+      {/* Quick Filter inside Sidebar */}
+      <div className="px-3 pt-3 pb-1">
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+          <input
+            type="text"
+            value={navSearch}
+            onChange={(e) => setNavSearch(e.target.value)}
+            placeholder="ابحث في أقسام البرنامج..."
+            className="w-full pr-8 pl-3 py-1.5 rounded-xl bg-slate-800/70 border border-slate-700/70 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition"
+          />
+          {navSearch && (
+            <button
+              type="button"
+              onClick={() => setNavSearch('')}
+              className="absolute left-2.5 top-2 text-slate-400 hover:text-white"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Categorized Navigation Links (Right Sidebar) */}
+      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-4 scrollbar-thin">
+        {navSections.map((section) => {
+          const filteredItems = section.items.filter(
+            (item) =>
+              !navSearch.trim() ||
+              item.label.includes(navSearch.trim()) ||
+              item.subtitle.includes(navSearch.trim())
+          );
+          if (filteredItems.length === 0) return null;
+
+          return (
+            <div key={section.title} className="space-y-1">
+              <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                <span>{section.title}</span>
+                <span className="h-px flex-1 bg-slate-800 mr-2" />
+              </div>
+
+              <div className="space-y-1">
+                {filteredItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => isMobile && setMobileMenuOpen(false)}
+                      className={`group flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl transition-all ${
+                        isActive
+                          ? 'bg-gradient-to-l from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-900/40 font-black'
+                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white font-semibold'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition ${
+                            isActive
+                              ? 'bg-white/20 text-white'
+                              : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-emerald-400'
+                          }`}
+                        >
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs sm:text-[13px] leading-snug truncate">
+                            {item.label}
+                          </div>
+                          <div
+                            className={`text-[10px] truncate ${
+                              isActive ? 'text-emerald-100' : 'text-slate-400'
+                            }`}
+                          >
+                            {item.subtitle}
+                          </div>
+                        </div>
+                      </div>
+
+                      {item.badge ? (
+                        <span
+                          className={`px-2 py-0.5 text-[9px] font-black rounded-full shrink-0 ${
+                            isActive
+                              ? 'bg-white text-emerald-700'
+                              : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      ) : (
+                        <ChevronLeft
+                          className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                            isActive
+                              ? 'text-white translate-x-0'
+                              : 'text-slate-600 opacity-0 group-hover:opacity-100'
+                          }`}
+                        />
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Bottom Actions inside Right Sidebar */}
+      <div className="p-3 border-t border-slate-800 bg-slate-950/60 space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              setPassError(null);
+              setPassSuccess(null);
+              setShowPasswordModal(true);
+            }}
+            className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition border border-slate-700"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
+            <span>الباسوورد</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white text-xs font-bold transition border border-rose-500/30"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>خروج آمن</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
-      {/* Top Bar */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-2">
-          {/* Logo and Brand */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white shadow-md shadow-emerald-600/20 shrink-0">
-              <Truck className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <div className="min-w-0">
-              <div className="font-black text-sm sm:text-lg text-slate-800 leading-tight truncate">{branding.appName}</div>
-              <div className="text-[10px] sm:text-[11px] text-emerald-600 font-semibold truncate hidden sm:block">{branding.managerName}</div>
+    <>
+      {/* DESKTOP RIGHT SIDEBAR (شريط التبويبات الرأسي على اليمين) */}
+      <aside className="hidden lg:block w-72 shrink-0 bg-slate-900 border-l border-slate-800 min-h-screen sticky top-0 h-screen z-40 shadow-xl">
+        {renderSidebarContent(false)}
+      </aside>
+
+      {/* MOBILE / TABLET TOP BAR + RIGHT DRAWER TRIGGER */}
+      <div className="lg:hidden sticky top-0 z-40 bg-slate-900 text-white border-b border-slate-800 px-3 py-2.5 flex items-center justify-between gap-2 shadow-md">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-2 rounded-xl bg-emerald-600 text-white shadow-sm flex items-center gap-1.5 text-xs font-black shrink-0"
+          >
+            <Menu className="w-5 h-5" />
+            <span>القائمة</span>
+          </button>
+          <div className="min-w-0">
+            <div className="font-black text-sm text-white truncate">{branding.appName}</div>
+            <div className="text-[10px] text-emerald-400 font-bold truncate">
+              {currentItem.label}
             </div>
           </div>
+        </div>
 
-          {/* User profile, Live Sync, Password Change & Logout */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            {/* Live Sync Status Pill */}
-            <RealtimeSync />
-
-            {/* Profile Pill */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-xl border border-slate-200">
-              <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div className="text-right">
-                <div className="text-xs font-bold text-slate-800">{branding.managerName || userName}</div>
-                <div className="text-[10px] text-emerald-600 font-medium">المدير العام</div>
-              </div>
-            </div>
-
-            {/* Settings & Backup Button */}
-            <Link
-              href="/admin/settings"
-              title="إعدادات النظام والنسخ الاحتياطي"
-              className={`p-2 sm:px-2.5 sm:py-1.5 rounded-xl border transition flex items-center gap-1.5 text-xs font-bold shadow-2xs shrink-0 ${
-                pathname === '/admin/settings'
-                  ? 'bg-emerald-600 text-white border-emerald-600'
-                  : 'text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 bg-slate-50 border-slate-200'
-              }`}
-            >
-              <Settings className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${pathname === '/admin/settings' ? 'text-white' : 'text-slate-600'}`} />
-              <span className="hidden md:inline">الإعدادات والنسخ</span>
-            </Link>
-
-            {/* Change Password Button */}
-            <button
-              onClick={() => {
-                setPassError(null);
-                setPassSuccess(null);
-                setShowPasswordModal(true);
-              }}
-              title="تغيير كلمة مرور المدير العام"
-              className="p-2 sm:px-2.5 sm:py-1.5 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 bg-slate-50 border border-slate-200 rounded-xl transition flex items-center gap-1.5 text-xs font-bold shadow-2xs shrink-0"
-            >
-              <KeyRound className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-emerald-600" />
-              <span className="hidden md:inline">تغيير الباسوورد</span>
-            </button>
-
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              title="تسجيل الخروج"
-              className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition flex items-center gap-1 text-xs font-semibold shrink-0"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">خروج</span>
-            </button>
-          </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <RealtimeSync />
+          <Link
+            href="/admin/settings"
+            className="p-2 rounded-xl bg-slate-800 text-slate-200 hover:text-white"
+            title="الإعدادات والهوية"
+          >
+            <Settings className="w-4 h-4" />
+          </Link>
         </div>
       </div>
 
-      {/* Navigation Tabs Bar with Desktop Scroll Arrows */}
-      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 border-t border-slate-100 flex items-center gap-1.5 relative">
-        {/* Right Arrow (Scroll Right / Forward in RTL) */}
-        <button
-          type="button"
-          onClick={() => scrollNav('right')}
-          title="تحريك التبويبات لليمين"
-          aria-label="تحريك التبويبات لليمين"
-          className="hidden md:flex items-center justify-center w-8 h-8 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-700 border border-slate-200 hover:border-emerald-200 transition shrink-0 active:scale-90 shadow-2xs"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-
-        {/* Scrollable Nav Container */}
-        <div
-          ref={navContainerRef}
-          className="flex-1 overflow-x-auto scrollbar-none scroll-smooth py-2 touch-pan-x [-webkit-overflow-scrolling:touch]"
-        >
-          <nav className="flex space-x-1 space-x-reverse min-w-max">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
-                    isActive
-                      ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+      {/* MOBILE SLIDE-OVER RIGHT DRAWER */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="relative w-80 max-w-[85vw] h-full bg-slate-900 z-10 shadow-2xl">
+            {renderSidebarContent(true)}
+          </div>
         </div>
-
-        {/* Left Arrow (Scroll Left / Backward in RTL) */}
-        <button
-          type="button"
-          onClick={() => scrollNav('left')}
-          title="تحريك التبويبات لليسار"
-          aria-label="تحريك التبويبات لليسار"
-          className="hidden md:flex items-center justify-center w-8 h-8 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-700 border border-slate-200 hover:border-emerald-200 transition shrink-0 active:scale-90 shadow-2xs"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-      </div>
+      )}
 
       {/* Modal: Change Admin Password */}
       {showPasswordModal && (
@@ -253,7 +467,9 @@ export default function AdminNav({ userName }: AdminNavProps) {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm">تغيير كلمة مرور المدير العام</h3>
-                  <div className="text-[11px] text-slate-500">حساب {branding.managerName || userName}</div>
+                  <div className="text-[11px] text-slate-500">
+                    حساب {branding.managerName || userName}
+                  </div>
                 </div>
               </div>
               <button
@@ -308,8 +524,7 @@ export default function AdminNav({ userName }: AdminNavProps) {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
-                    minLength={3}
-                    placeholder="3 أحرف أو أرقام على الأقل"
+                    placeholder="أدخل كلمة المرور الجديدة"
                     className="w-full pr-9 pl-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
                   />
                 </div>
@@ -326,40 +541,32 @@ export default function AdminNav({ userName }: AdminNavProps) {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    minLength={3}
-                    placeholder="أعد إدخال كلمة المرور الجديدة"
+                    placeholder="أعد كتابة كلمة المرور الجديدة"
                     className="w-full pr-9 pl-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowPasswordModal(false)}
-                  className="px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100"
-                >
-                  إلغاء
-                </button>
+              <div className="flex items-center gap-2 pt-2">
                 <button
                   type="submit"
                   disabled={passLoading}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white font-bold text-xs shadow-md transition cursor-pointer"
                 >
-                  {passLoading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <KeyRound className="w-3.5 h-3.5" />
-                      <span>حفظ كلمة المرور</span>
-                    </>
-                  )}
+                  {passLoading ? 'جاري التحديث...' : 'حفظ كلمة المرور الجديدة'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold text-xs"
+                >
+                  إلغاء
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }

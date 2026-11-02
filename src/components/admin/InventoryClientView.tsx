@@ -7,6 +7,7 @@ import { Product, InventoryBatch, Category } from '@/types';
 import {
   createBatchAction,
   createProductAction,
+  updateProductAction,
   createCategoryAction,
   deleteCategoryAction,
   createProductAndBatchAction,
@@ -32,6 +33,7 @@ import {
   FileCheck,
   ShieldAlert,
   Search,
+  Edit2,
 } from 'lucide-react';
 
 export interface AvailablePurchaseItem {
@@ -184,11 +186,15 @@ export default function InventoryClientView({
   );
 
   // Batch Form State & On-the-spot Product Creation
+  const [batchSourceMode, setBatchSourceMode] = useState<'direct' | 'supplier'>(
+    unassignedInvoices.length > 0 ? 'supplier' : 'direct'
+  );
   const [batchMode, setBatchMode] = useState<'existing' | 'new'>('existing');
   const [batchProductId, setBatchProductId] = useState(initialProducts[0]?.id || '');
   const [batchNumber, setBatchNumber] = useState('');
   const [batchQuantity, setBatchQuantity] = useState(50);
   const [productionDate, setProductionDate] = useState(new Date().toISOString().slice(0, 16));
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
 
   // Inline product fields when adding an incoming batch for a brand new product
   const [newProductName, setNewProductName] = useState('');
@@ -254,15 +260,6 @@ export default function InventoryClientView({
     setMsg(null);
 
     try {
-      if (!selectedPurchaseItem) {
-        setMsg({
-          type: 'error',
-          text: 'يرجى تحديد فاتورة الشراء والتوريد التابعة للمورد أولاً (الربط الإلزامي بفواتير الموردين)',
-        });
-        setLoading(false);
-        return;
-      }
-
       const qty = Number(batchQuantity);
       if (isNaN(qty) || qty <= 0) {
         setMsg({ type: 'error', text: 'يرجى إدخال كمية صحيحة للتشغيلة أكبر من الصفر' });
@@ -270,28 +267,100 @@ export default function InventoryClientView({
         return;
       }
 
-      if (qty > selectedPurchaseItem.remainingQty) {
-        setMsg({
-          type: 'error',
-          text: `عذراً، الكمية المراد إدخالها للتشغيلة (${qty}) أكبر من الكمية المتبقية في فاتورة المورد المحددة (المتبقي: ${selectedPurchaseItem.remainingQty})`,
-        });
+      if (batchSourceMode === 'supplier') {
+        if (!selectedPurchaseItem) {
+          setMsg({
+            type: 'error',
+            text: 'يرجى تحديد فاتورة الشراء والتوريد التابعة للمورد أو التبديل إلى (إضافة مباشرة للمخزن)',
+          });
+          setLoading(false);
+          return;
+        }
+
+        if (qty > selectedPurchaseItem.remainingQty) {
+          setMsg({
+            type: 'error',
+            text: `عذراً، الكمية المراد إدخالها للتشغيلة (${qty}) أكبر من الكمية المتبقية في فاتورة المورد المحددة (المتبقي: ${selectedPurchaseItem.remainingQty})`,
+          });
+          setLoading(false);
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('productId', selectedPurchaseItem.productId);
+        formData.append(
+          'batchNumber',
+          batchNumber.trim() || `BAT-${Date.now().toString().slice(-6)}`
+        );
+        formData.append('quantity', qty.toString());
+        formData.append('productionDate', new Date(productionDate).toISOString());
+        formData.append('purchaseId', selectedPurchaseItem.purchaseId);
+        formData.append('purchaseItemId', selectedPurchaseItem.purchaseItemId);
+
+        const res = await createBatchAction(formData);
+        setLoading(false);
+
+        if (res.success && res.batch) {
+          const prod =
+            productsList.find((p) => p.id === selectedPurchaseItem.productId) || selectedProduct;
+          if (prod) {
+            const newBat = {
+              ...res.batch,
+              product: prod,
+              hoursRemaining: (prod.shelfLifeDays || 1) * 24,
+            };
+            setBatchesList((prev) => [newBat, ...prev]);
+          }
+
+          setAvailableInvoices((prev) =>
+            prev.map((inv) =>
+              inv.purchaseItemId === selectedPurchaseItem.purchaseItemId
+                ? {
+                    ...inv,
+                    assignedQty: inv.assignedQty + qty,
+                    remainingQty: Math.max(0, inv.remainingQty - qty),
+                  }
+                : inv
+            )
+          );
+
+          setMsg({
+            type: 'success',
+            text: res.message || 'تم تسجيل التشغيلة بنجاح وربطها بفاتورة المورد بنظام FIFO',
+          });
+          setShowBatchModal(false);
+          setBatchNumber('');
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('app:sync'));
+          }
+          router.refresh();
+        } else {
+          setMsg({ type: 'error', text: res.error || 'حدث خطأ أثناء تسجيل التشغيلة' });
+        }
+        return;
+      }
+
+      // Direct Warehouse Entry Mode (رصيد أول المدة / إضافة تشغيلة مباشرة للمخزن)
+      if (!batchProductId) {
+        setMsg({ type: 'error', text: 'يرجى اختيار الصنف المراد إضافة التشغيلة له' });
         setLoading(false);
         return;
       }
 
       const formData = new FormData();
-      formData.append('productId', selectedPurchaseItem.productId);
-      formData.append('batchNumber', batchNumber.trim() || `BAT-${Date.now().toString().slice(-6)}`);
+      formData.append('productId', batchProductId);
+      formData.append(
+        'batchNumber',
+        batchNumber.trim() || `BAT-DIR-${Date.now().toString().slice(-6)}`
+      );
       formData.append('quantity', qty.toString());
       formData.append('productionDate', new Date(productionDate).toISOString());
-      formData.append('purchaseId', selectedPurchaseItem.purchaseId);
-      formData.append('purchaseItemId', selectedPurchaseItem.purchaseItemId);
 
       const res = await createBatchAction(formData);
       setLoading(false);
 
       if (res.success && res.batch) {
-        const prod = productsList.find((p) => p.id === selectedPurchaseItem.productId) || selectedProduct;
+        const prod = productsList.find((p) => p.id === batchProductId) || selectedProduct;
         if (prod) {
           const newBat = {
             ...res.batch,
@@ -300,23 +369,9 @@ export default function InventoryClientView({
           };
           setBatchesList((prev) => [newBat, ...prev]);
         }
-
-        // Update remaining quantity in local state
-        setAvailableInvoices((prev) =>
-          prev.map((inv) =>
-            inv.purchaseItemId === selectedPurchaseItem.purchaseItemId
-              ? {
-                  ...inv,
-                  assignedQty: inv.assignedQty + qty,
-                  remainingQty: Math.max(0, inv.remainingQty - qty),
-                }
-              : inv
-          )
-        );
-
         setMsg({
           type: 'success',
-          text: res.message || 'تم تسجيل التشغيلة بنجاح وربطها بفاتورة المورد بنظام FIFO',
+          text: res.message || 'تم إضافة التشغيلة المباشرة للمخزن الرئيسي بنجاح',
         });
         setShowBatchModal(false);
         setBatchNumber('');
@@ -325,11 +380,31 @@ export default function InventoryClientView({
         }
         router.refresh();
       } else {
-        setMsg({ type: 'error', text: res.error || 'حدث خطأ أثناء تسجيل التشغيلة' });
+        setMsg({ type: 'error', text: res.error || 'حدث خطأ أثناء إضافة التشغيلة' });
       }
     } catch (err: any) {
       setLoading(false);
       setMsg({ type: 'error', text: err.message || 'حدث خطأ غير متوقع' });
+    }
+  };
+
+  const handleUpdateProduct = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editProduct) return;
+    setLoading(true);
+    setMsg(null);
+    const formData = new FormData(e.currentTarget);
+    const res = await updateProductAction(editProduct.id, formData);
+    setLoading(false);
+
+    if (res.success && res.product) {
+      setProductsList((prev) => prev.map((p) => (p.id === res.product!.id ? res.product! : p)));
+      setMsg({ type: 'success', text: res.message || 'تم تحديث بيانات وأسعار المنتج بنجاح' });
+      setEditProduct(null);
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('app:sync'));
+      router.refresh();
+    } else {
+      setMsg({ type: 'error', text: res.error || 'فشل تحديث بيانات المنتج' });
     }
   };
 
@@ -856,105 +931,152 @@ export default function InventoryClientView({
               </button>
             </div>
 
-            {unassignedInvoices.length === 0 ? (
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl mb-4">
+              <button
+                type="button"
+                onClick={() => setBatchSourceMode('direct')}
+                className={`py-2 rounded-lg text-xs font-black transition ${
+                  batchSourceMode === 'direct'
+                    ? 'bg-white text-emerald-700 shadow-2xs'
+                    : 'text-slate-600'
+                }`}
+              >
+                إضافة مباشرة للمخزن (سريع)
+              </button>
+              <button
+                type="button"
+                onClick={() => setBatchSourceMode('supplier')}
+                className={`py-2 rounded-lg text-xs font-black transition ${
+                  batchSourceMode === 'supplier'
+                    ? 'bg-white text-blue-700 shadow-2xs'
+                    : 'text-slate-600'
+                }`}
+              >
+                ربط بفاتورة مورد ({unassignedInvoices.length})
+              </button>
+            </div>
+
+            {batchSourceMode === 'supplier' && unassignedInvoices.length === 0 ? (
               <div className="space-y-4">
                 <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-sm space-y-2">
                   <div className="flex items-center gap-2 font-bold text-amber-950">
                     <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
-                    <span>تنبيه نظام الرقابة والتدقيق (الربط الإلزامي بفواتير الموردين)</span>
+                    <span>لا توجد فواتير شراء موردين معلقة حالياً</span>
                   </div>
                   <p className="text-xs text-amber-800 leading-relaxed">
-                    بناءً على معايير الانضباط المالي والمخزني، لا يمكن إضافة أي تشغيلة بالمخزن الرئيسي دون ربطها بفاتورة شراء معتمدة من المورد.
-                    حالياً، لا توجد فواتير شراء موردين بها كميات واردة غير مسندة لتشغيلات.
+                    جميع فواتير الموردين تم استلام تشغيلاتها بالمخزن، أو يمكنك التبديل إلى تبويب{' '}
+                    <strong>(إضافة مباشرة للمخزن)</strong> بالأعلى لإدخال رصيد فوري دون فاتورة مورد.
                   </p>
                 </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2">
                   <button
                     type="button"
-                    onClick={() => setShowBatchModal(false)}
-                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
+                    onClick={() => setBatchSourceMode('direct')}
+                    className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition"
                   >
-                    إغلاق
+                    إضافة مباشرة للمخزن الآن
                   </button>
                   <Link
                     href="/admin/suppliers"
                     className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition flex items-center gap-1.5"
                   >
                     <Building2 className="w-4 h-4" />
-                    <span>الانتقال لتسجيل فاتورة شراء مورد جديدة</span>
+                    <span>تسجيل فاتورة مورد جديدة</span>
                   </Link>
                 </div>
               </div>
             ) : (
               <form onSubmit={handleAddBatch} className="space-y-4">
-                {/* 1. Mandatory Supplier Purchase Linkage Dropdown */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-700">
-                      فاتورة شراء وتوريد المورد (ربط إلزامي) <span className="text-rose-500">*</span>
+                {batchSourceMode === 'direct' ? (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      اختر الصنف المراد إضافة التشغيلة له بالمخزن *
                     </label>
-                    <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 flex items-center gap-1">
-                      <FileCheck className="w-3 h-3" />
-                      <span>تدقيق مالي ومخزني</span>
-                    </span>
+                    <select
+                      value={batchProductId}
+                      onChange={(e) => setBatchProductId(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 bg-white font-bold"
+                    >
+                      {productsList.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} — سعر البيع: {p.price} ج.م — التكلفة: {p.cost} ج.م
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <select
-                    value={selectedPurchaseItemId}
-                    onChange={(e) => {
-                      setSelectedPurchaseItemId(e.target.value);
-                      const item = availableInvoices.find((i) => i.purchaseItemId === e.target.value);
-                      if (item) {
-                        setBatchProductId(item.productId);
-                        setBatchQuantity(Math.min(item.remainingQty, 50));
-                      }
-                    }}
-                    required
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 bg-white font-medium"
-                  >
-                    {unassignedInvoices.map((inv) => (
-                      <option key={inv.purchaseItemId} value={inv.purchaseItemId}>
-                        [{inv.purchaseNumber}] — {inv.supplierName} — {inv.productName} (المتبقي: {inv.remainingQty} كرتونة)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 2. Detailed Purchase Item Badge & Info Card */}
-                {selectedPurchaseItem && (
-                  <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl space-y-2.5">
-                    <div className="flex items-center justify-between text-xs font-bold text-blue-950">
-                      <span className="flex items-center gap-1">
-                        <span>رقم الفاتورة:</span>
-                        <strong className="font-mono text-blue-700">{selectedPurchaseItem.purchaseNumber}</strong>
-                      </span>
-                      <span>المورد: <strong className="text-slate-900">{selectedPurchaseItem.supplierName}</strong></span>
+                ) : (
+                  <>
+                    {/* 1. Mandatory Supplier Purchase Linkage Dropdown */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-700">
+                          فاتورة شراء وتوريد المورد <span className="text-rose-500">*</span>
+                        </label>
+                        <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 flex items-center gap-1">
+                          <FileCheck className="w-3 h-3" />
+                          <span>تدقيق مالي ومخزني</span>
+                        </span>
+                      </div>
+                      <select
+                        value={selectedPurchaseItemId}
+                        onChange={(e) => {
+                          setSelectedPurchaseItemId(e.target.value);
+                          const item = availableInvoices.find((i) => i.purchaseItemId === e.target.value);
+                          if (item) {
+                            setBatchProductId(item.productId);
+                            setBatchQuantity(Math.min(item.remainingQty, 50));
+                          }
+                        }}
+                        required
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 bg-white font-medium"
+                      >
+                        {unassignedInvoices.map((inv) => (
+                          <option key={inv.purchaseItemId} value={inv.purchaseItemId}>
+                            [{inv.purchaseNumber}] — {inv.supplierName} — {inv.productName} (المتبقي: {inv.remainingQty} كرتونة)
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                      <div className="bg-white/90 p-2 rounded-xl text-center border border-slate-100 shadow-xs">
-                        <div className="text-[10px] text-slate-400 font-bold">إجمالي كمية الفاتورة</div>
-                        <div className="font-black text-slate-800 text-sm mt-0.5">{selectedPurchaseItem.totalInvoiceQty} كرتونة</div>
-                      </div>
-                      <div className="bg-white/90 p-2 rounded-xl text-center border border-slate-100 shadow-xs">
-                        <div className="text-[10px] text-slate-400 font-bold">مسند سابقاً لتشغيلات</div>
-                        <div className="font-black text-slate-800 text-sm mt-0.5">{selectedPurchaseItem.assignedQty} كرتونة</div>
-                      </div>
-                      <div className="bg-emerald-50/90 p-2 rounded-xl text-center border border-emerald-300 shadow-xs">
-                        <div className="text-[10px] text-emerald-800 font-bold">المتبقي المتاح للإدخال</div>
-                        <div className="font-black text-emerald-700 text-sm mt-0.5">{selectedPurchaseItem.remainingQty} كرتونة</div>
-                      </div>
-                    </div>
+                    {/* 2. Detailed Purchase Item Badge & Info Card */}
+                    {selectedPurchaseItem && (
+                      <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl space-y-2.5">
+                        <div className="flex items-center justify-between text-xs font-bold text-blue-950">
+                          <span className="flex items-center gap-1">
+                            <span>رقم الفاتورة:</span>
+                            <strong className="font-mono text-blue-700">{selectedPurchaseItem.purchaseNumber}</strong>
+                          </span>
+                          <span>المورد: <strong className="text-slate-900">{selectedPurchaseItem.supplierName}</strong></span>
+                        </div>
 
-                    <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-blue-100">
-                      <span>الصنف المربوط: <strong className="text-slate-800">{selectedPurchaseItem.productName}</strong></span>
-                      <span>سعر التكلفة: <strong className="text-emerald-700 font-mono">{selectedPurchaseItem.unitCost} ج.م</strong></span>
-                    </div>
-                  </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                          <div className="bg-white/90 p-2 rounded-xl text-center border border-slate-100 shadow-xs">
+                            <div className="text-[10px] text-slate-400 font-bold">إجمالي كمية الفاتورة</div>
+                            <div className="font-black text-slate-800 text-sm mt-0.5">{selectedPurchaseItem.totalInvoiceQty} كرتونة</div>
+                          </div>
+                          <div className="bg-white/90 p-2 rounded-xl text-center border border-slate-100 shadow-xs">
+                            <div className="text-[10px] text-slate-400 font-bold">مسند سابقاً لتشغيلات</div>
+                            <div className="font-black text-slate-800 text-sm mt-0.5">{selectedPurchaseItem.assignedQty} كرتونة</div>
+                          </div>
+                          <div className="bg-emerald-50/90 p-2 rounded-xl text-center border border-emerald-300 shadow-xs">
+                            <div className="text-[10px] text-emerald-800 font-bold">المتبقي المتاح للإدخال</div>
+                            <div className="font-black text-emerald-700 text-sm mt-0.5">{selectedPurchaseItem.remainingQty} كرتونة</div>
+                          </div>
+                        </div>
+
+                        <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-blue-100">
+                          <span>الصنف المربوط: <strong className="text-slate-800">{selectedPurchaseItem.productName}</strong></span>
+                          <span>سعر التكلفة: <strong className="text-emerald-700 font-mono">{selectedPurchaseItem.unitCost} ج.م</strong></span>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* 3. Real-time Quantity Validation Warning */}
-                {selectedPurchaseItem && batchQuantity > selectedPurchaseItem.remainingQty && (
+                {batchSourceMode === 'supplier' && selectedPurchaseItem && batchQuantity > selectedPurchaseItem.remainingQty && (
                   <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-xs font-bold text-rose-800 flex items-center gap-2 animate-pulse">
                     <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                     <span>
@@ -983,7 +1105,7 @@ export default function InventoryClientView({
                       <label className="text-xs font-bold text-slate-700">
                         الكمية الواردة (بالكرتونة) *
                       </label>
-                      {selectedPurchaseItem && (
+                      {batchSourceMode === 'supplier' && selectedPurchaseItem && (
                         <span className="text-[10px] text-emerald-700 font-bold">
                           الحد الأقصى: {selectedPurchaseItem.remainingQty}
                         </span>
@@ -992,12 +1114,12 @@ export default function InventoryClientView({
                     <input
                       type="number"
                       min="1"
-                      max={selectedPurchaseItem?.remainingQty || 9999}
+                      max={batchSourceMode === 'supplier' ? (selectedPurchaseItem?.remainingQty || 9999) : 99999}
                       required
                       value={batchQuantity}
                       onChange={(e) => setBatchQuantity(parseInt(e.target.value, 10) || 0)}
                       className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:ring-2 font-bold ${
-                        selectedPurchaseItem && batchQuantity > selectedPurchaseItem.remainingQty
+                        batchSourceMode === 'supplier' && selectedPurchaseItem && batchQuantity > selectedPurchaseItem.remainingQty
                           ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-600 bg-rose-50/50 text-rose-800'
                           : 'border-slate-200 focus:ring-emerald-500/20 focus:border-emerald-600'
                       }`}
@@ -1050,9 +1172,9 @@ export default function InventoryClientView({
                     type="submit"
                     disabled={
                       loading ||
-                      !selectedPurchaseItem ||
                       batchQuantity <= 0 ||
-                      batchQuantity > selectedPurchaseItem.remainingQty
+                      (batchSourceMode === 'supplier' &&
+                        (!selectedPurchaseItem || batchQuantity > selectedPurchaseItem.remainingQty))
                     }
                     className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition disabled:opacity-50"
                   >
@@ -1436,20 +1558,30 @@ export default function InventoryClientView({
                           {prod.shelfLifeDays} يوم
                         </td>
                         <td className="py-2.5 pl-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setDeleteTarget({
-                                type: 'product',
-                                id: prod.id,
-                                name: `المنتج: ${prod.name}`,
-                              })
-                            }
-                            title="حذف المنتج"
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setEditProduct(prod)}
+                              title="تعديل السعر والبيانات"
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDeleteTarget({
+                                  type: 'product',
+                                  id: prod.id,
+                                  name: `المنتج: ${prod.name}`,
+                                })
+                              }
+                              title="حذف المنتج"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1466,6 +1598,125 @@ export default function InventoryClientView({
                 إغلاق
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Product Prices & Details */}
+      {editProduct && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <Edit2 className="w-4 h-4" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-sm">
+                  تعديل أسعار وبيانات: {editProduct.name}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditProduct(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateProduct} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">اسم الصنف *</label>
+                <input
+                  type="text"
+                  name="name"
+                  required
+                  defaultValue={editProduct.name}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    سعر البيع للعميل (ج.م) *
+                  </label>
+                  <input
+                    type="number"
+                    name="price"
+                    step="any"
+                    min={0}
+                    required
+                    defaultValue={editProduct.price}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-black text-emerald-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    سعر التكلفة (ج.م) *
+                  </label>
+                  <input
+                    type="number"
+                    name="cost"
+                    step="any"
+                    min={0}
+                    required
+                    defaultValue={editProduct.cost}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">التصنيف</label>
+                  <input
+                    type="text"
+                    name="category"
+                    defaultValue={editProduct.category}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">الوحدة</label>
+                  <input
+                    type="text"
+                    name="unit"
+                    defaultValue={editProduct.unit}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    الصلاحية (أيام)
+                  </label>
+                  <input
+                    type="number"
+                    name="shelfLifeDays"
+                    min={1}
+                    defaultValue={editProduct.shelfLifeDays}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditProduct(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition"
+                >
+                  {loading ? 'جاري التحديث...' : 'حفظ التعديلات'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

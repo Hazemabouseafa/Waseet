@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { dbStore } from '@/lib/store';
 import { getCurrentUser } from '@/lib/auth';
 import { getWhiteLabelConfig } from '@/lib/white-label';
+import AdminQuickOperationsCenter from '@/components/admin/AdminQuickOperationsCenter';
 import {
   TrendingUp,
   Wallet,
@@ -13,7 +14,6 @@ import {
   ArrowLeft,
   ChevronLeft,
   CheckCircle2,
-  Calendar,
   Sparkles,
   HandCoins,
 } from 'lucide-react';
@@ -26,6 +26,25 @@ export default async function AdminDashboardPage() {
   const analytics = await dbStore.getAnalytics();
   const profitLoss = await dbStore.getProfitLossEngine();
   const recentInvoices = (await dbStore.getInvoices()).slice(0, 5);
+  const products = await dbStore.getProducts();
+  const batches = await dbStore.getBatches();
+  const clients = await dbStore.getClients();
+  const categories = await dbStore.getCategories();
+
+  const productsWithStock = products.map((p) => {
+    const warehouseStock = batches
+      .filter((b) => b.productId === p.id && b.quantity > 0)
+      .reduce((sum, b) => sum + b.quantity, 0);
+    return {
+      ...p,
+      warehouseStock,
+      vanStock: 0,
+    };
+  });
+
+  const totalWarehouseUnits = productsWithStock.reduce((s, p) => s + p.warehouseStock, 0);
+  const totalVanUnits = analytics.repPerformance.reduce((s, r) => s + r.vanUnitsRemaining, 0);
+  const totalClientDebts = clients.reduce((s, c) => s + (c.creditBalance || 0), 0);
 
   const branding = getWhiteLabelConfig();
   const displayName = branding.managerName || user?.name || 'المدير العام';
@@ -71,6 +90,18 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Quick Operations Center (بيع مباشر من المخزن + تحصيل فوري + إضافة مخزون + تنبيهات النواقص) */}
+      <AdminQuickOperationsCenter
+        productsWithStock={productsWithStock}
+        clients={clients}
+        categories={categories.map((c) => c.name)}
+        treasuryBalance={profitLoss.treasury.currentBalance}
+        totalClientDebts={totalClientDebts}
+        totalSupplierPayables={profitLoss.treasury.totalSupplierPayables}
+        totalWarehouseUnits={totalWarehouseUnits}
+        totalVanUnits={totalVanUnits}
+      />
 
       {/* Real-Time Net Profit & P&L Engine Card on Admin Dashboard */}
       <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-6 text-white shadow-xl border border-slate-700/60 relative overflow-hidden">
