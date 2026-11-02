@@ -16,6 +16,7 @@ import {
   deleteProductAction,
 } from '@/lib/actions';
 import ConfirmDeleteModal from '@/components/admin/ConfirmDeleteModal';
+import { exportWorkbookToExcel } from '@/lib/excelExport';
 import {
   Boxes,
   Plus,
@@ -35,6 +36,7 @@ import {
   ShieldAlert,
   Search,
   Edit2,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 export interface AvailablePurchaseItem {
@@ -548,6 +550,69 @@ export default function InventoryClientView({
     }
   };
 
+  const handleExportInventoryExcel = () => {
+    exportWorkbookToExcel('جرد_المخزن_والصلاحيات', [
+      {
+        sheetName: 'تشغيلات المخزن والصلاحيات',
+        headers: [
+          'رقم التشغيلة',
+          'اسم المنتج',
+          'التصنيف',
+          'الكمية المتبقية بالمخزن',
+          'الكمية الأولية',
+          'الوحدة',
+          'تاريخ الإنتاج',
+          'تاريخ انتهاء الصلاحية',
+          'الساعات المتبقية',
+          'حالة الصلاحية',
+        ],
+        rows: filteredBatches.map((b) => [
+          b.batchNumber,
+          b.product.name,
+          b.product.category === 'dairy'
+            ? 'ألبان'
+            : b.product.category === 'juice'
+            ? 'عصائر'
+            : b.product.category,
+          b.quantity,
+          b.initialQuantity,
+          b.product.unit,
+          new Date(b.productionDate).toLocaleDateString('ar-EG'),
+          new Date(b.expiryDate).toLocaleDateString('ar-EG'),
+          b.hoursRemaining,
+          b.quantity === 0
+            ? 'نفدت الكمية'
+            : b.hoursRemaining <= 0
+            ? 'منتهية الصلاحية'
+            : b.hoursRemaining <= 48
+            ? 'تقترب من الانتهاء'
+            : 'صالحة وطازجة',
+        ]),
+      },
+      {
+        sheetName: 'دليل الأصناف والأسعار',
+        headers: [
+          'اسم المنتج',
+          'التصنيف',
+          'سعر البيع (ج.م)',
+          'سعر التكلفة (ج.م)',
+          'ربح الكرتونة (ج.م)',
+          'الوحدة',
+          'الصلاحية الافتراضية (يوم)',
+        ],
+        rows: productsList.map((p) => [
+          p.name,
+          p.category,
+          p.price,
+          p.cost,
+          p.price - p.cost,
+          p.unit,
+          p.shelfLifeDays,
+        ]),
+      },
+    ]);
+  };
+
   return (
     <div className="space-y-6">
       {/* Action Bar */}
@@ -596,6 +661,15 @@ export default function InventoryClientView({
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+          <button
+            type="button"
+            onClick={handleExportInventoryExcel}
+            className="flex-1 sm:flex-none justify-center px-3.5 py-2 rounded-xl border border-teal-200 hover:bg-teal-50 text-teal-800 text-xs font-bold transition flex items-center gap-1.5 bg-teal-50/70 shadow-xs whitespace-nowrap cursor-pointer"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-teal-600" />
+            <span>تصدير Excel للمخزن</span>
+          </button>
+
           {/* Manage Categories Button */}
           <button
             onClick={() => {

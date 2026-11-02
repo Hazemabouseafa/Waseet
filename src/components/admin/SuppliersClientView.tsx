@@ -12,6 +12,7 @@ import {
   deleteSupplierPurchaseAction,
 } from '@/lib/actions';
 import ConfirmDeleteModal from '@/components/admin/ConfirmDeleteModal';
+import { exportWorkbookToExcel } from '@/lib/excelExport';
 import {
   Building2,
   Plus,
@@ -33,6 +34,7 @@ import {
   Boxes,
   Percent,
   Trash2,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface Props {
@@ -424,6 +426,46 @@ export default function SuppliersClientView({
 
         {/* Buttons */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+          <button
+            type="button"
+            onClick={() =>
+              exportWorkbookToExcel('حسابات_الموردين_وفواتير_الشراء', [
+                {
+                  sheetName: 'قائمة الموردين ومستحقاتهم',
+                  headers: ['كود المورد', 'اسم المورد / الشركة', 'رقم الهاتف', 'العنوان', 'إجمالي المستحق للمورد (ج.م)'],
+                  rows: suppliers.map((s) => [s.id, s.name, s.phone || '-', s.address || '-', s.totalDue]),
+                },
+                {
+                  sheetName: 'فواتير الشراء والتوريد',
+                  headers: [
+                    'رقم فاتورة الشراء',
+                    'التاريخ',
+                    'المورد',
+                    'طريقة الدفع',
+                    'إجمالي الفاتورة',
+                    'المدفوع للمورد',
+                    'المتبقي آجل للمورد',
+                    'ملاحظات',
+                  ],
+                  rows: purchases.map((p) => [
+                    p.purchaseNumber,
+                    new Date(p.createdAt).toLocaleDateString('ar-EG'),
+                    p.supplier?.name || '-',
+                    p.paymentType === 'cash' ? 'نقدي' : 'آجل',
+                    p.totalAmount,
+                    p.paidAmount,
+                    p.remainingDue,
+                    p.notes || '-',
+                  ]),
+                },
+              ])
+            }
+            className="px-3.5 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-teal-600" />
+            <span>تصدير Excel للموردين</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setShowAddSupplierModal(true)}

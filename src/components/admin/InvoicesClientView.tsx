@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Invoice, InvoiceItem, Product, Client, User } from '@/types';
 import { deleteInvoiceAction } from '@/lib/actions';
 import ConfirmDeleteModal from '@/components/admin/ConfirmDeleteModal';
+import { exportSingleSheetToExcel } from '@/lib/excelExport';
 import {
   FileText,
   Search,
@@ -25,6 +26,7 @@ import {
   Trash2,
   AlertCircle,
   CheckCircle2,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface ExtendedInvoice extends Invoice {
@@ -202,9 +204,50 @@ export default function InvoicesClientView({ invoices: initialInvoices, reps, cl
 
       {/* Time Filter Bar (أشرطة الفلترة الزمنية للفواتير: أسبوعي / شهري / اليوم / مخصص) */}
       <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span className="text-xs font-black text-slate-800">تصفية الفواتير حسب الفترة:</span>
+        <div className="flex items-center justify-between md:justify-start gap-3">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="text-xs font-black text-slate-800">تصفية الفواتير حسب الفترة:</span>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              exportSingleSheetToExcel(
+                'سجل_فواتير_المبيعات',
+                'فواتير المبيعات',
+                [
+                  'رقم الفاتورة',
+                  'التاريخ',
+                  'العميل',
+                  'المندوب',
+                  'طريقة الدفع',
+                  'الإجمالي قبل الخصم',
+                  'الخصم',
+                  'الصافي النهائي',
+                  'المدفوع نقداً',
+                  'المتبقي آجل',
+                  'ملاحظات',
+                ],
+                filteredInvoices.map((inv) => [
+                  inv.invoiceNumber,
+                  new Date(inv.createdAt).toLocaleDateString('ar-EG'),
+                  inv.client?.name || '-',
+                  inv.rep?.name || '-',
+                  inv.paymentType === 'cash' ? 'نقدي' : 'آجل',
+                  inv.subtotal,
+                  inv.discount,
+                  inv.totalAmount,
+                  inv.paidAmount,
+                  Math.max(0, inv.totalAmount - inv.paidAmount),
+                  inv.notes || '-',
+                ])
+              )
+            }
+            className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-teal-600" />
+            <span>تصدير الفواتير المعروضة (Excel)</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none touch-pan-x">

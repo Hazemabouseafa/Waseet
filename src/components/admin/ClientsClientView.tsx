@@ -9,6 +9,7 @@ import {
   deleteClientAction,
   adminRecordCollectionAction,
 } from '@/lib/actions';
+import { exportSingleSheetToExcel } from '@/lib/excelExport';
 import {
   Building2,
   Plus,
@@ -23,6 +24,7 @@ import {
   CreditCard,
   Store,
   HandCoins,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface Props {
@@ -151,13 +153,38 @@ export default function ClientsClientView({ clients }: Props) {
           />
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20"
-        >
-          <Plus className="w-4 h-4" />
-          <span>إضافة منفذ / سوبرماركت جديد</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              exportSingleSheetToExcel(
+                'كشف_العملاء_والمديونيات',
+                'العملاء والمديونيات',
+                ['كود العميل', 'اسم المنفذ / العميل', 'رقم الهاتف', 'العنوان', 'المديونية الحالية (ج.م)', 'تاريخ التسجيل'],
+                filteredClients.map((c) => [
+                  c.id,
+                  c.name,
+                  c.phone || '-',
+                  c.address || '-',
+                  c.creditBalance,
+                  new Date(c.createdAt).toLocaleDateString('ar-EG'),
+                ])
+              )
+            }
+            className="px-3.5 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-teal-600" />
+            <span>تصدير Excel للعملاء</span>
+          </button>
+
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20"
+          >
+            <Plus className="w-4 h-4" />
+            <span>إضافة منفذ / سوبرماركت جديد</span>
+          </button>
+        </div>
       </div>
 
       {msg && (

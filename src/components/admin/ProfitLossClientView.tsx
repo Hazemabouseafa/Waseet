@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { exportWorkbookToExcel } from '@/lib/excelExport';
 import {
   ProfitLossSummary,
   PayrollPayment,
@@ -483,7 +484,57 @@ export default function ProfitLossClientView({ initialData }: Props) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() =>
+              exportWorkbookToExcel('تقرير_الأرباح_والخسائر_والخزينة', [
+                {
+                  sheetName: 'ملخص الأرباح والخزينة',
+                  headers: ['البند المالي', 'القيمة (ج.م)'],
+                  rows: [
+                    ['إجمالي إيرادات المبيعات', financialMetrics.totalSalesRevenue],
+                    ['النقدية المحصلة فعلياً', financialMetrics.totalCollectedCash],
+                    ['المبيعات الآجلة المتبقية بالسوق', financialMetrics.totalPendingCredit],
+                    ['تكلفة البضاعة المباعة (COGS)', financialMetrics.periodCogs],
+                    ['مجمل ربح المخزون', financialMetrics.inventoryProfits],
+                    ['إجمالي المرتبات والمصروفات', financialMetrics.totalOperatingExpenses],
+                    ['إجمالي الخصومات الممنوحة', financialMetrics.totalDiscounts],
+                    ['خسائر التوالف والمرتجعات', financialMetrics.totalWastageLoss],
+                    ['صافي ربح الفترة النهائي', financialMetrics.netPeriodProfit],
+                    ['رصيد الخزينة الفعلي الحالي', data.treasury.currentBalance],
+                    ['إجمالي مستحقات الموردين الآجلة', financialMetrics.allTimeSupplierPayables],
+                    ['صافي السيولة الحرة بعد الموردين', financialMetrics.netFreeTreasuryCash],
+                  ],
+                },
+                {
+                  sheetName: 'ربحية الأصناف المباعة',
+                  headers: [
+                    'اسم الصنف',
+                    'التصنيف',
+                    'الكمية المباعة (كرتونة)',
+                    'إجمالي الإيراد (ج.م)',
+                    'إجمالي التكلفة (ج.م)',
+                    'صافي الربح (ج.م)',
+                    'هامش الربح (%)',
+                  ],
+                  rows: filteredProductBreakdown.map((item) => [
+                    item.productName,
+                    item.category,
+                    item.unitsSold,
+                    item.revenue,
+                    item.cost,
+                    item.profit,
+                    Number(item.marginPercent.toFixed(1)),
+                  ]),
+                },
+              ])
+            }
+            className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl text-xs font-black shadow-xs transition flex items-center gap-2 active:scale-95 cursor-pointer"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>تصدير شيت Excel للأرباح والخزينة</span>
+          </button>
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}

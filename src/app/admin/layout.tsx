@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import AdminNav from '@/components/admin/AdminNav';
+import AdminUniversalExcelBar from '@/components/admin/AdminUniversalExcelBar';
 import RealtimeSync from '@/components/common/RealtimeSync';
 import { getWhiteLabelConfig } from '@/lib/white-label';
 import {
@@ -106,6 +107,7 @@ export default async function AdminLayout({
         </header>
 
         <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8">
+          <AdminUniversalExcelBar />
           {children}
         </main>
 
